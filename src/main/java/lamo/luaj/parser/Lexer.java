@@ -1,5 +1,7 @@
 package lamo.luaj.parser;
 
+import lamo.luaj.parser.Token.TType;
+
 import java.io.Reader;
 import java.io.Closeable;
 import java.io.IOException;
@@ -9,27 +11,27 @@ public class Lexer implements Closeable {
 
     private final static HashMap<String, Token> reversed = new HashMap<String, Token>();
     static {
-        reversed.put("and", Token.AND);
-        reversed.put("break", Token.BREAK);
-        reversed.put("do", Token.DO);
-        reversed.put("else", Token.ELSE);
-        reversed.put("elseif", Token.ELSEIF);
-        reversed.put("end", Token.END);
-        reversed.put("false", Token.FALSE);
-        reversed.put("for", Token.FOR);
-        reversed.put("function", Token.FUNCTION);
-        reversed.put("if", Token.IF);
-        reversed.put("in", Token.IN);
-        reversed.put("local", Token.LOCAL);
-        reversed.put("return", Token.RETURN);
-        reversed.put("nil", Token.NIL);
-        reversed.put("not", Token.NOT);
-        reversed.put("or", Token.OR);
-        reversed.put("repeat", Token.REPEAT);
-        reversed.put("then", Token.THEN);
-        reversed.put("true", Token.TRUE);
-        reversed.put("until", Token.UNTIL);
-        reversed.put("while", Token.WHILE);
+        reversed.put("and", new Token(TType.AND));
+        reversed.put("break", new Token(TType.BREAK));
+        reversed.put("do", new Token(TType.DO));
+        reversed.put("else", new Token(TType.ELSE));
+        reversed.put("elseif", new Token(TType.ELSEIF));
+        reversed.put("end", new Token(TType.END));
+        reversed.put("false", new Token(TType.FALSE));
+        reversed.put("for", new Token(TType.FOR));
+        reversed.put("function", new Token(TType.FUNCTION));
+        reversed.put("if", new Token(TType.IF));
+        reversed.put("in", new Token(TType.IN));
+        reversed.put("local", new Token(TType.LOCAL));
+        reversed.put("return", new Token(TType.RETURN));
+        reversed.put("nil", new Token(TType.NIL));
+        reversed.put("not", new Token(TType.NOT));
+        reversed.put("or", new Token(TType.OR));
+        reversed.put("repeat", new Token(TType.REPEAT));
+        reversed.put("then", new Token(TType.THEN));
+        reversed.put("true", new Token(TType.TRUE));
+        reversed.put("until", new Token(TType.UNTIL));
+        reversed.put("while", new Token(TType.WHILE));
     };
     private final static char EOF_CHAR = (char)-1;
 
@@ -60,91 +62,91 @@ public class Lexer implements Closeable {
             switch(current) {
                 case '+':
                     consume();
-                    return Token.ADD;
+                    return new Token(TType.ADD);
                 case '-':
                     if (skipComment()) {
                         continue;
                     } else {
-                        return Token.MINUS;
+                        return new Token(TType.MINUS);
                     }
                 case '*':
                     consume();
-                    return Token.MULTI;
+                    return new Token(TType.MULTI);
                 case '/':
                     consume();
-                    return Token.DIVIDE;
+                    return new Token(TType.DIVIDE);
                 case '%':
                     consume();
-                    return Token.MODE;
+                    return new Token(TType.MODE);
                 case '^':
                     consume();
-                    return Token.POWER;
+                    return new Token(TType.POWER);
                 case '#':
                     consume();
-                    return Token.LENGTH;
+                    return new Token(TType.LENGTH);
                 case '=':
                     consume();
                     if (current == '=') {
                         consume();
-                        return Token.EQUAL;
+                        return new Token(TType.EQUAL);
                     } else {
-                        return Token.ASSIGN;
+                        return new Token(TType.ASSIGN);
                     }
                 case '~':
                     consume();
                     match('=');
-                    return Token.NOT_EQUAL;
+                    return new Token(TType.NOT_EQUAL);
                 case '<':
                     consume();
                     if (current == '=') {
                         consume();
-                        return Token.GREATE_EQUAL;
+                        return new Token(TType.GREATE_EQUAL);
                     } else {
-                        return Token.GREATE_THAN;
+                        return new Token(TType.GREATE_THAN);
                     }
                 case '>':
                     consume();
                     if (current == '=') {
                         consume();
-                        return Token.LESS_EQUAL;
+                        return new Token(TType.LESS_EQUAL);
                     } else {
-                        return Token.LESS_THAN;
+                        return new Token(TType.LESS_THAN);
                     }
                 case '(':
                     consume();
-                    return Token.LPARENT;
+                    return new Token(TType.LPARENT);
                 case ')':
                     consume();
-                    return Token.RPARENT;
+                    return new Token(TType.RPARENT);
                 case '[': {
                     Token t = readLongString();
                     if (t == null) {
-                        return Token.LBRACKET;
+                        return new Token(TType.LBRACKET);
                     } else {
                         return t;
                     }
                 }
                 case ']':
                     consume();
-                    return Token.RBRACKET;
+                    return new Token(TType.RBRACKET);
                 case '{':
                     consume();
-                    return Token.LBRACE;
+                    return new Token(TType.LBRACE);
                 case '}':
                     consume();
-                    return Token.RBRACE;
+                    return new Token(TType.RBRACE);
                 case '\'':
                 case '"':
                     return readString();
                 case ',':
                     consume();
-                    return Token.COMMA;
+                    return new Token(TType.COMMA);
                 case ':':
                     consume();
-                    return Token.COLON;
+                    return new Token(TType.COLON);
                 case ';':
                     consume();
-                    return Token.SEMICOLON;
+                    return new Token(TType.SEMICOLON);
                 case '.': {
                     Token t = readNumber();
                     if (t != null) {
@@ -152,14 +154,14 @@ public class Lexer implements Closeable {
                     }
                     consume();
                     if (current != '.') {
-                        return Token.DOT;
+                        return new Token(TType.DOT);
                     }
                     consume();
                     if (current != '.') {
-                        return Token.CONCAT;
+                        return new Token(TType.CONCAT);
                     }
                     consume();
-                    return Token.DOTS;
+                    return new Token(TType.DOTS);
                 }
                 default:
                     if (isDigit()) {
@@ -175,7 +177,7 @@ public class Lexer implements Closeable {
         if (!closed) {
             close();
         }
-        return Token.EOF;
+        return new Token(TType.EOF);
     }
 
     public void close() {
@@ -198,7 +200,7 @@ public class Lexer implements Closeable {
                 sb.append(consume());
                 sb.append(readHex());
 
-                return Token.NUMBER.withText(sb.toString());
+                return new Token(TType.NUMBER, sb.toString());
             }
         } else if (current == '.') {
             sb.append(consume());
@@ -220,7 +222,7 @@ public class Lexer implements Closeable {
             }
         }
 
-        return Token.NUMBER.withText(sb.toString());
+        return new Token(TType.NUMBER, sb.toString());
     }
 
     private String readHex() {
@@ -244,7 +246,7 @@ public class Lexer implements Closeable {
         if (t != null) {
             return t;
         } else {
-            return Token.NAME.withText(name);
+            return new Token(TType.NAME, name);
         }
     }
 
@@ -267,7 +269,7 @@ public class Lexer implements Closeable {
         }
         consume();
 
-        return Token.STRING.withText(sb.toString());
+        return new Token(TType.STRING, sb.toString());
     }
 
     private char readEscape() throws LexerException {
@@ -359,7 +361,7 @@ public class Lexer implements Closeable {
                 continue;
             }
 
-            return Token.STRING.withText(sb.toString());
+            return new Token(TType.STRING, sb.toString());
         }
 
         throw new LexerException(startLine, startColumn, "unfinished long string");

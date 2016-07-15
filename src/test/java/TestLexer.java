@@ -1,4 +1,6 @@
 import lamo.luaj.parser.*;
+import lamo.luaj.parser.Token.TType;
+
 import java.io.FileReader;
 
 public class TestLexer {
@@ -11,7 +13,7 @@ public class TestLexer {
             Lexer l = new Lexer(file, new FileReader(file));
             try {
                 Token t = l.next();
-                while (t != Token.EOF) {
+                while (t.getType() != TType.EOF) {
                     System.out.println(t);
                     t = l.next();
                 }

@@ -1,6 +1,7 @@
 package lamo.luaj.parser;
 
 import lamo.luaj.parser.ast.*;
+import lamo.luaj.parser.Token.TType;
 
 import java.io.Reader;
 import java.io.Closeable;
@@ -44,7 +45,7 @@ public class Parser implements Closeable {
 
 	private Stat[] parseStats() throws ParserException {
 		ArrayList<Stat> stats = new ArrayList<Stat>();
-		while (!testCurrent(Token.EOF)) {
+		while (!testCurrent(TType.EOF)) {
 			stats.add(parseStat());
 		}
 
@@ -52,8 +53,8 @@ public class Parser implements Closeable {
 	}
 
 	private Stat parseStat() throws ParserException {
-		if (testCurrent(Token.LOCAL)) {
-			if (testLookahead(Token.FUNCTION)) {
+		if (testCurrent(TType.LOCAL)) {
+			if (testLookahead(TType.FUNCTION)) {
 				return parseLocalFuncState();
 			} else {
 				return parseLocalStat();
@@ -64,12 +65,12 @@ public class Parser implements Closeable {
 	}
 
 	private LocalStat parseLocalStat() throws ParserException {
-		match(Token.LOCAL);
+		match(TType.LOCAL);
 
 		LocalStat stat = new LocalStat();
 		stat.setNames(parseNameList());
 
-		if (tryMatch(Token.ASSIGN) == null) {
+		if (tryMatch(TType.ASSIGN) == null) {
 			return stat;
 		}
 
@@ -79,12 +80,12 @@ public class Parser implements Closeable {
 	}
 
 	private LocalStat parseLocalFuncState() throws ParserException {
-		match(Token.LOCAL);
-		match(Token.FUNCTION);
+		match(TType.LOCAL);
+		match(TType.FUNCTION);
 
 		LocalStat stat = new LocalStat();
 
-		String[] names = new String[]{match(Token.NAME).getText()};
+		String[] names = new String[]{match(TType.NAME).getText()};
 		stat.setNames(names);
 
 		Expr[] explist = new Expr[]{parseFuncBody()};
@@ -94,13 +95,13 @@ public class Parser implements Closeable {
 	}
 
 	private FuncBody parseFuncBody() throws ParserException {
-		match(Token.LPARENT);
+		match(TType.LPARENT);
 
 		FuncBody body = new FuncBody();
 
 		body.setParlist(parseParlist());
 
-		match(Token.RPARENT);
+		match(TType.RPARENT);
 
 		body.setBlock(parseBlock());
 
@@ -108,16 +109,16 @@ public class Parser implements Closeable {
 	}
 
 	private FuncBody.Parlist parseParlist() throws ParserException {
-		if (testCurrent(Token.DOTS) || testCurrent(Token.NAME)) {
+		if (testCurrent(TType.DOTS) || testCurrent(TType.NAME)) {
 			FuncBody.Parlist parlist = new FuncBody.Parlist();
 			ArrayList<String> params = new ArrayList<String>();
 			do {
-				if (tryMatch(Token.DOTS) != null) {
+				if (tryMatch(TType.DOTS) != null) {
 					parlist.setIsVarargs(true);
 					break;
 				}
-				params.add(match(Token.NAME).getText());
-			} while(tryMatch(Token.COMMA) != null);
+				params.add(match(TType.NAME).getText());
+			} while(tryMatch(TType.COMMA) != null);
 
 			if (params.size() > 0) {
 				parlist.setParams(params.toArray(new String[params.size()]));
@@ -133,8 +134,8 @@ public class Parser implements Closeable {
 		ArrayList<String> names = new ArrayList<String>();
 
 		do {
-			names.add(match(Token.NAME).getText());
-		} while(tryMatch(Token.COMMA) != null);
+			names.add(match(TType.NAME).getText());
+		} while(tryMatch(TType.COMMA) != null);
 
 		return names.size() > 0 ? names.toArray(new String[names.size()]) : null;
 	}
@@ -144,13 +145,13 @@ public class Parser implements Closeable {
 
 		do {
 			exps.add(parseExpr());
-		} while(tryMatch(Token.COMMA) != null);
+		} while(tryMatch(TType.COMMA) != null);
 
 		return exps.size() > 0 ? exps.toArray(new Expr[exps.size()]) : null;
 	}
 
 	private Expr parseExpr() throws ParserException {
-		switch(current) {
+		switch(current.getType()) {
 			case NIL:
 				consume();
 				return new Nil();
@@ -176,28 +177,28 @@ public class Parser implements Closeable {
 		throw new ParserException();
 	}	
 
-	private Token match(Token t) throws ParserException {
-		if (current == t) {
+	private Token match(TType t) throws ParserException {
+		if (current.getType() == t) {
 			return consume();
 		}
 
 		throw new ParserException();
 	}
 
-	private Token tryMatch(Token t) throws ParserException {
-		if (current == t) {
+	private Token tryMatch(TType t) throws ParserException {
+		if (current.getType() == t) {
 			return consume();
 		} else {
 			return null;
 		}
 	}
 
-	private boolean testCurrent(Token t) {
-		return current == t;
+	private boolean testCurrent(TType t) {
+		return current.getType() == t;
 	}
 
-	private boolean testLookahead(Token t) {
-		return lookahead == t;
+	private boolean testLookahead(TType t) {
+		return lookahead.getType() == t;
 	}
 
 	private Token consume() throws ParserException {
