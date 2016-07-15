@@ -1,10 +1,11 @@
 package lamo.luaj.parser;
 
 import java.io.Reader;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 
-public class Lexer {
+public class Lexer implements Closeable {
 
     private final static HashMap<String, Token> reversed = new HashMap<String, Token>();
     static {

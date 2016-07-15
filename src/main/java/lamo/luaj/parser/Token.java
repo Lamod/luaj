@@ -29,8 +29,8 @@ public enum Token {
     RBRACE, // }
     LBRACKET, // [
     RBRACKET, // ]
-    LPARENT, // {
-    RPARENT, // }
+    LPARENT, // (
+    RPARENT, // )
     BREAK, // break
     DO, // do
     END, // end
