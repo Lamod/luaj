@@ -4,6 +4,7 @@ public class Chunk {
 
 	private int level;
 	private Stat[] statements;
+	private LastStat lastStat;
 
 	public Stat[] getStatements() {
 		return statements;
@@ -11,6 +12,14 @@ public class Chunk {
 
 	public void setStatements(Stat[] statements) {
 		this.statements = statements;
+	}
+
+	public LastStat getLastStat() {
+		return this.lastStat;
+	}
+
+	public void setLastStat(LastStat lastStat) {
+		this.lastStat = lastStat;
 	}
 
 	public void setLevel(int level) {

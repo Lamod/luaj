@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class FuncBody implements Expr {
+public class FuncBody {
 
 	private Parlist parlist;
 	private Block block;
