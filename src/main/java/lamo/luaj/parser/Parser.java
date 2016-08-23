@@ -31,7 +31,7 @@ public class Parser implements Closeable {
 
 	private Chunk parseChunk() throws ParserException {
 		Chunk chunk = new Chunk();
-		chunk.setStatements(parseStats());
+		chunk.setStatements(parseStats().getStats());
 		if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
 			chunk.setLastStat(parseLastStat());
 			tryMatch(TType.COLON);
@@ -40,25 +40,39 @@ public class Parser implements Closeable {
 		return chunk;
 	}
 
-	private Block parseBlock() throws ParserException {
+	private Block parseBlock(TType... terminators) throws ParserException {
 		Block block = new Block();
-		block.setStatements(parseStats());
-		if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
-			block.setLastStat(parseLastStat());
-			tryMatch(TType.COLON);
+		StatsResult result = parseStats(terminators);
+		block.setStatements(result.getStats());
+		if (result.terminator == null) {
+			if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
+				block.setLastStat(parseLastStat());
+				tryMatch(TType.COLON);
+			}
 		}
 
 		return block;
 	}
 
-	private Stat[] parseStats() throws ParserException {
-		ArrayList<Stat> stats = new ArrayList<Stat>();
+	private StatsResult parseStats(TType... terminators) throws ParserException {
+		ArrayList<Stat> statList = new ArrayList<Stat>();
+		TType terminator = null;
+
+		parseStat:
 		while (!testCurrent(TType.EOF)) {
-			stats.add(parseStat());
+			for (TType t : terminators) {
+				if (current.getType() == t) {
+					terminator = t;
+					break parseStat;
+				}
+			}
+			statList.add(parseStat());
 			tryMatch(TType.COLON);
 		}
 
-		return stats.size() > 0 ? stats.toArray(new Stat[stats.size()]) : null;
+		Stat[] stats = statList.size() > 0 ? statList.toArray(new Stat[statList.size()]) : null;
+
+		return new StatsResult(stats, terminator);
 	}
 
 	private LastStat parseLastStat() throws ParserException {
@@ -74,7 +88,7 @@ public class Parser implements Closeable {
 		switch (current.getType()) {
 			case DO: {
 				consume();
-				BlockStat bs = new BlockStat(parseBlock());
+				BlockStat bs = new BlockStat(parseBlock(TType.END));
 				match(TType.END);
 				return bs;
 			}
@@ -82,13 +96,13 @@ public class Parser implements Closeable {
 				consume();
 				Expr c = parseExpr();
 				match(TType.DO);
-				Block b= parseBlock();
+				Block b= parseBlock(TType.END);
 				match(TType.END);
 				return new WhileStat(c, b);
 			}
 			case REPEAT: {
 				consume();
-				Block b = parseBlock();
+				Block b = parseBlock(TType.UNTIL);
 				match(TType.UNTIL);
 				Expr c = parseExpr();
 				return new RepeatStat(c, b);
@@ -97,7 +111,7 @@ public class Parser implements Closeable {
 				consume();
 				Expr c = parseExpr();
 				match(TType.THEN);
-				Block b = parseBlock();
+				Block b = parseBlock(TType.ELSE, TType.ELSEIF, TType.END);
 				
 				IfStat s = new IfStat();
 				s.append(c, b);
@@ -105,12 +119,12 @@ public class Parser implements Closeable {
 				while (tryMatch(TType.ELSEIF) != null) {
 					c = parseExpr();
 					match(TType.THEN);
-					b = parseBlock();
+					b = parseBlock(TType.ELSE, TType.ELSEIF, TType.END);
 					s.append(c, b);
 				}
 
 				if (tryMatch(TType.ELSE) != null) {
-					s.append(null, parseBlock());
+					s.append(null, parseBlock(TType.END));
 				}
 				
 				match(TType.END);
@@ -131,14 +145,14 @@ public class Parser implements Closeable {
 						step = null;
 					}
 					match(TType.DO);
-					Block b = parseBlock();
+					Block b = parseBlock(TType.END);
 					match(TType.END);
 					return new NumbericForStat(n, init, limit, step, b);
 				} else {
 					String[] nl = parseNameList();
 					Expr[] el = parseExplist();
 					match(TType.DO);
-					Block b = parseBlock();
+					Block b = parseBlock(TType.END);
 					match(TType.END);
 					return new GenericForStat(nl, el, b);
 				}
@@ -210,7 +224,8 @@ public class Parser implements Closeable {
 			match(TType.RPARENT);
 		}
 
-		body.setBlock(parseBlock());
+		body.setBlock(parseBlock(TType.END));
+		match(TType.END);
 
 		return body;
 	}
@@ -369,6 +384,26 @@ public class Parser implements Closeable {
 		} catch (LexerException e) {
 			throw new ParserException();
 		}
+	}
+
+	private static class StatsResult {
+
+		private Stat[] stats;
+		private TType terminator;
+
+		private StatsResult(Stat[] stats, TType terminator) {
+			this.stats = stats;
+			this.terminator = terminator;
+		}
+
+		private Stat[] getStats() {
+			return this.stats;
+		}
+
+		private TType getTerminator() {
+			return this.terminator;
+		}
+
 	}
 
 }
