@@ -267,16 +267,68 @@ public class Parser implements Closeable {
 			case STRING:
 				return new LiteralString(consume().getText());
 			case DOTS:
-				break;
+				return null;
 			case FUNCTION:
 				consume();
-				FuncBody body = parseFuncBody();
-				break;
+				return new FuncExpr(parseFuncBody());
+			case LBRACE:
+				return parseTableConstructor();
 			default:
+				throw new ParserException();
+		}
+	}	
+
+	private TableConstructorExpr parseTableConstructor() throws ParserException {
+		match(TType.LBRACE);
+
+		TableConstructorExpr constructor = new TableConstructorExpr();
+
+		if (tryMatch(TType.RBRACE) == null) {
+			constructor.setFields(parseFieldList());
+			match(TType.RBRACE);
 		}
 
-		throw new ParserException();
-	}	
+		return constructor;
+	}
+
+	private TableConstructorExpr.Field[] parseFieldList() throws ParserException {
+		ArrayList<TableConstructorExpr.Field> fields = new ArrayList<TableConstructorExpr.Field>();
+
+		do {
+			switch(current.getType()) {
+				case LBRACKET: {
+					consume();
+					Expr key = parseExpr();
+					match(TType.RBRACKET);
+					match(TType.ASSIGN);
+					Expr value = parseExpr();
+
+					fields.add(new TableConstructorExpr.ExprField(key, value));
+
+					break;
+				}
+				case NAME: {
+					if (testLookahead(TType.ASSIGN)) {
+						String key = consume().getText();
+						match(TType.ASSIGN);
+						Expr value = parseExpr();
+
+						fields.add(new TableConstructorExpr.NameField(key, value));
+
+						break;
+					} else {
+						// fallthrough
+					}
+				}
+				default: {
+					fields.add(new TableConstructorExpr.ListField(parseExpr()));
+					break;
+				}
+			}
+		} while (tryMatch(TType.COMMA) != null || tryMatch(TType.COLON) != null);
+
+		return fields.toArray(new TableConstructorExpr.Field[fields.size()]);
+	}
 
 	private Token match(TType t) throws ParserException {
 		if (current.getType() == t) {
