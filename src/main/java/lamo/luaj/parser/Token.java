@@ -85,7 +85,7 @@ public class Token {
     }
 
     public String toString() {
-        String s = "<Token type:" + super.toString();
+        String s = "<Token type:" + type;
         if (text != null) {
             s = s + " text:\"" + text + "\"";
         }
