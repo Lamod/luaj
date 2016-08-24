@@ -173,7 +173,7 @@ public class Parser implements Closeable {
 					return parseLocalStat();
 				}
 			default:
-				throw new ParserException();
+				return parseExprStat();
 		}
 	}
 
@@ -210,6 +210,36 @@ public class Parser implements Closeable {
 		}
 
 		stat.setExplist(parseExplist());
+
+		return stat;
+	}
+
+	private Stat parseExprStat() throws ParserException {
+		PrimaryExpr expr = parsePrimaryExpr();
+		if (expr.isFuncCallExpr()) {
+			return new FuncCallStat(expr);
+		} else {
+			return parseAssignStat(expr);
+		}
+	}
+
+	private AssignStat parseAssignStat(PrimaryExpr var) throws ParserException {
+		AssignStat stat = new AssignStat();
+
+		ArrayList<PrimaryExpr> varList = new ArrayList<PrimaryExpr>();
+		varList.add(var);
+		while (tryMatch(TType.COMMA) != null) {
+			var = parsePrimaryExpr();
+			if (var.isFuncCallExpr()) {
+				throw new ParserException();
+			}
+			varList.add(var);
+		}
+		stat.setVariables(varList.toArray(new PrimaryExpr[varList.size()]));
+
+		if (tryMatch(TType.ASSIGN) != null) {
+			stat.setValues(parseExplist());
+		}
 
 		return stat;
 	}
@@ -267,6 +297,30 @@ public class Parser implements Closeable {
 	}
 
 	private Expr parseExpr() throws ParserException {
+		Expr expr = null;
+		UnaryExpr.Operator uop = UnaryExpr.getOperator(current);
+		if (uop != null) {
+			consume();
+			Expr operand = parseExpr();
+			UnaryExpr uexpr = new UnaryExpr();
+			uexpr.setOperator(uop);
+			uexpr.setOperand(operand);
+			expr = uexpr;
+		} else {
+			expr = parseSimpleExpr();
+		}
+
+		BinaryExpr.Operator bop = BinaryExpr.getOperator(current);
+		while (bop != null) {
+			consume();
+			expr = BinaryExpr.adjust(expr, bop, parseExpr());
+			bop = BinaryExpr.getOperator(current);
+		}
+
+		return expr;
+	}	
+
+	private Expr parseSimpleExpr() throws ParserException {
 		switch(current.getType()) {
 			case NIL:
 				consume();
@@ -282,16 +336,101 @@ public class Parser implements Closeable {
 			case STRING:
 				return new LiteralString(consume().getText());
 			case DOTS:
-				return null;
+				return new VarargExpr();
 			case FUNCTION:
 				consume();
 				return new FuncExpr(parseFuncBody());
 			case LBRACE:
 				return parseTableConstructor();
 			default:
+				return parsePrimaryExpr();
+		}
+	}
+
+	private PrimaryExpr parsePrimaryExpr() throws ParserException {
+		Expr prefix = null;
+		if (testCurrent(TType.NAME)) {
+			prefix = new Var(consume().getText());
+		} else if (testCurrent(TType.LPARENT)) {
+			consume();
+			prefix = parseExpr();
+			match(TType.RPARENT);
+			if (prefix instanceof BinaryExpr) {
+				((BinaryExpr)prefix).setClosed(true);
+			}
+		} else {
+			throw new ParserException();
+		}
+
+		ArrayList<PrimaryExpr.Segment> segmentList = new ArrayList<PrimaryExpr.Segment>();
+		loop:
+		while (true) {
+			switch (current.getType()) {
+				case DOT: {
+					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
+					seg.setKey(new LiteralString(consume().getText()));
+					segmentList.add(seg);
+
+					break;
+				}
+				case LBRACKET: {
+					consume();
+					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
+					seg.setKey(parseExpr());
+					segmentList.add(seg);
+
+					break;
+				}
+				case COLON: {
+					consume();
+					PrimaryExpr.FieldAndArgsSegment seg = new PrimaryExpr.FieldAndArgsSegment();
+					seg.setKey(match(TType.NAME).getText());
+					seg.setArgs(parseFuncArgs());
+					segmentList.add(seg);
+
+					break;
+				}
+				case LPARENT: case LBRACE: case STRING: {
+					PrimaryExpr.FuncArgsSegment seg = new PrimaryExpr.FuncArgsSegment();
+					seg.setArgs(parseFuncArgs());
+					segmentList.add(seg);
+
+					break;
+				}
+				default:
+					break loop;
+			}
+		}
+
+		PrimaryExpr primaryExpr = new PrimaryExpr();
+		primaryExpr.setPrefixExpr(prefix);
+		if (segmentList.size() > 0) {
+			primaryExpr.setSegments(segmentList.toArray(new PrimaryExpr.Segment[segmentList.size()]));
+		}
+
+		return primaryExpr;
+	}
+
+	private Expr[] parseFuncArgs() throws ParserException {
+		switch (current.getType()) {
+			case LPARENT: {
+				consume();
+				Expr[] args = null;
+				if (tryMatch(TType.RPARENT) == null) {
+					args = parseExplist();
+					match(TType.RPARENT);
+				}
+
+				return args;
+			}
+			case LBRACE:
+				return new Expr[] { parseTableConstructor() };
+			case STRING:
+				return new Expr[] { new LiteralString(consume().getText()) };
+			default:
 				throw new ParserException();
 		}
-	}	
+	}
 
 	private TableConstructorExpr parseTableConstructor() throws ParserException {
 		match(TType.LBRACE);

@@ -13,6 +13,7 @@ public class TestParser {
 
 			try {
 				Chunk c = p.parse();
+				System.out.println(c.getStatements().length + " statements:");
 				System.out.println(c);
 			} catch (Exception e) {
 				e.printStackTrace();
