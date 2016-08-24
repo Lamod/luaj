@@ -34,7 +34,7 @@ public class Parser implements Closeable {
 		chunk.setStatements(parseStats().getStats());
 		if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
 			chunk.setLastStat(parseLastStat());
-			tryMatch(TType.COLON);
+			tryMatch(TType.SEMICOLON);
 		}
 
 		return chunk;
@@ -47,7 +47,7 @@ public class Parser implements Closeable {
 		if (result.terminator == null) {
 			if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
 				block.setLastStat(parseLastStat());
-				tryMatch(TType.COLON);
+				tryMatch(TType.SEMICOLON);
 			}
 		}
 
@@ -67,7 +67,7 @@ public class Parser implements Closeable {
 				}
 			}
 			statList.add(parseStat());
-			tryMatch(TType.COLON);
+			tryMatch(TType.SEMICOLON);
 		}
 
 		Stat[] stats = statList.size() > 0 ? statList.toArray(new Stat[statList.size()]) : null;
@@ -340,7 +340,7 @@ public class Parser implements Closeable {
 					break;
 				}
 			}
-		} while (tryMatch(TType.COMMA) != null || tryMatch(TType.COLON) != null);
+		} while (tryMatch(TType.COMMA) != null || tryMatch(TType.SEMICOLON) != null);
 
 		return fields.toArray(new TableConstructorExpr.Field[fields.size()]);
 	}
