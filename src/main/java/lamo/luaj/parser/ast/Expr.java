@@ -1,5 +1,3 @@
 package lamo.luaj.parser.ast;
 
-public interface Expr {
-
-}
+abstract public class Expr extends Node { }

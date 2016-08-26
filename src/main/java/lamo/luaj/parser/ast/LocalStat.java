@@ -1,6 +1,8 @@
 package lamo.luaj.parser.ast;
 
-public class LocalStat implements Stat {
+import lamo.luaj.util.ArrayUtil;
+
+public class LocalStat extends Stat {
 
 	private String[] names;
 	private Expr[] explist;
@@ -21,27 +23,18 @@ public class LocalStat implements Stat {
 		this.explist = explist;
 	}
 
-	public String toString() {
+	public String toCode() {
 		StringBuilder sb = new StringBuilder();
+		sb.append(getIntend());
 		sb.append("local ");
 		
-		for (int i = 0; i < names.length; ++i) {
-			if (i != 0) {
-				sb.append(", ");
-			}
-			sb.append(names[i]);
-		}
+		sb.append(ArrayUtil.join(this.names, ", "));
 
 		if (explist != null && explist.length > 0) {
 			sb.append(" = ");
-
-			for (int i = 0; i < explist.length; ++i) {
-				if (i != 0) {
-					sb.append(", ");
-				}
-				sb.append(explist[i].toString());
-			}
+			sb.append(ArrayUtil.join(this.explist, CODE_SERIALIZOR, ", "));
 		}
+		sb.append("\n");
 			
 		return sb.toString();
 	}

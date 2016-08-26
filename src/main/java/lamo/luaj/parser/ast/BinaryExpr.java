@@ -3,7 +3,7 @@ package lamo.luaj.parser.ast;
 import lamo.luaj.parser.Token;
 import lamo.luaj.parser.Token.TType;
 
-public class BinaryExpr implements Expr {
+public class BinaryExpr extends Expr {
 
 	public enum Operator {
  		OR(1, 1, "or"),
@@ -115,16 +115,16 @@ public class BinaryExpr implements Expr {
 		this.closed = closed;
 	}
 
-	public String toString() {
+	public String toCode() {
 		StringBuilder sb = new StringBuilder();
 		if (this.closed) {
 			sb.append("(");
 		}
-		sb.append(this.left.toString());
+		sb.append(this.left.toCode());
 		sb.append(" ");
 		sb.append(this.operator.toString());
 		sb.append(" ");
-		sb.append(this.right.toString());
+		sb.append(this.right.toCode());
 		if (this.closed) {
 			sb.append(")");
 		}

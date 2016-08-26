@@ -1,4 +1,9 @@
 package lamo.luaj.parser.ast;
 
-public class BreakStat implements LastStat {
+public class BreakStat extends LastStat {
+
+	public String toCode() {
+		return getIntend() + "break\n";
+	}
+
 }

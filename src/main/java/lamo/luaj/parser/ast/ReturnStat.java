@@ -1,6 +1,8 @@
 package lamo.luaj.parser.ast;
 
-public class ReturnStat implements LastStat {
+import lamo.luaj.util.ArrayUtil;
+
+public class ReturnStat extends LastStat {
 
 	private Expr[] exprList;
 
@@ -14,6 +16,18 @@ public class ReturnStat implements LastStat {
 
 	public void setExprList() {
 		this.exprList = exprList;
+	}
+
+	public String toCode() {
+		StringBuilder sb = new StringBuilder();
+
+		sb.append(getIntend());
+		sb.append("return ");
+		if (this.exprList != null) {
+			sb.append(ArrayUtil.join(this.exprList, CODE_SERIALIZOR, ", "));
+		}
+
+		return sb.toString();
 	}
 
 }

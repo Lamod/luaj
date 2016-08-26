@@ -1,4 +1,3 @@
 package lamo.luaj.parser.ast;
 
-public interface Stat {
-}
+abstract public class Stat extends Node { }

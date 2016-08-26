@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class LiteralNumber implements Expr {
+public class LiteralNumber extends Expr {
 
 	private String text;
 
@@ -16,7 +16,7 @@ public class LiteralNumber implements Expr {
 		return text;
 	}
 
-	public String toString() {
+	public String toCode() {
 		return text;
 	}
 

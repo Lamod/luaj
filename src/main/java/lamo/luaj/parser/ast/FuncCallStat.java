@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class FuncCallStat implements Stat {
+public class FuncCallStat extends Stat {
 
 	private PrimaryExpr expr;
 
@@ -15,6 +15,10 @@ public class FuncCallStat implements Stat {
 	public void setExpr(PrimaryExpr expr) {
 		assert(expr != null && expr.isFuncCallExpr());
 		this.expr = expr;
+	}
+
+	public String toCode() {
+		return getIntend() + this.expr.toCode() + "\n";
 	}
 
 }

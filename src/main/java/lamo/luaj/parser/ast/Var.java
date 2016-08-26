@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class Var implements Expr {
+public class Var extends Expr {
 
 	private String name;
 
@@ -16,7 +16,7 @@ public class Var implements Expr {
 		this.name = name;
 	}
 
-	public String toString() {
+	public String toCode() {
 		return this.name;
 	}
 

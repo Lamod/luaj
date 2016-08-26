@@ -3,7 +3,7 @@ package lamo.luaj.parser.ast;
 import lamo.luaj.parser.Token;
 import lamo.luaj.parser.Token.TType;
 
-public class UnaryExpr implements Expr {
+public class UnaryExpr extends Expr {
 
 	static public final int OP_PRIORITY = 8;
 
@@ -58,8 +58,8 @@ public class UnaryExpr implements Expr {
 		this.operator = op;
 	}
 
-	public String toString() {
-		return this.operator.toString() + this.operand.toString();
+	public String toCode() {
+		return this.operator.toString() + this.operand.toCode();
 	}
 
 }

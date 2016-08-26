@@ -14,7 +14,7 @@ public class TestParser {
 			try {
 				Chunk c = p.parse();
 				System.out.println(c.getStatements().length + " statements:");
-				System.out.println(c);
+				System.out.println(c.toCode());
 			} catch (Exception e) {
 				e.printStackTrace();
 			} finally {

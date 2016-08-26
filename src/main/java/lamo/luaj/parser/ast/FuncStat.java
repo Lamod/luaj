@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class FuncStat implements Stat {
+public class FuncStat extends Stat {
 
 	private FuncName name = new FuncName();
 	private FuncBody body;
@@ -21,7 +21,19 @@ public class FuncStat implements Stat {
 		this.body = body;
 	}
 
-	static public class FuncName {
+	public String toCode() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(getIntend());
+		sb.append("function ");
+		sb.append(this.name.toCode());
+		sb.append(this.body.toCode());
+		sb.append(getIntend());
+		sb.append("end\n");
+
+		return sb.toString();
+	}
+
+	static public class FuncName extends Node {
 
 		private String[] segments;
 		private boolean needSelf;
@@ -40,6 +52,22 @@ public class FuncStat implements Stat {
 
 		public void setNeedSelf(boolean needSelf) {
 			this.needSelf = needSelf;
+		}
+
+		public String toCode() {
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < this.segments.length; ++i) {
+				if (i > 0) {
+					if (i == this.segments.length - 1 && this.needSelf) {
+						sb.append(":");
+					} else {
+						sb.append(".");
+					}
+				}
+				sb.append(this.segments[i]);
+			}
+
+			return sb.toString();
 		}
 
 	}

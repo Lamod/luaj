@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class FuncExpr implements Expr {
+public class FuncExpr extends Expr {
 
 	private FuncBody body;
 
@@ -14,6 +14,16 @@ public class FuncExpr implements Expr {
 
 	public void setBody(FuncBody body) {
 		this.body = body;
+	}
+
+	public String toCode() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("function");
+		sb.append(this.body.toCode());
+		sb.append(getIntend());
+		sb.append("end");
+
+		return sb.toString();
 	}
 
 }

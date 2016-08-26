@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class WhileStat implements Stat {
+public class WhileStat extends Stat {
 
 	private Expr condition;
 	private Block block;
@@ -24,6 +24,21 @@ public class WhileStat implements Stat {
 
 	public void setBlock(Block block) {
 		this.block = block;
+	}
+
+	public String toCode() {
+		StringBuilder sb = new StringBuilder();
+		String intend = getIntend();
+
+		sb.append(intend);
+		sb.append("while ");
+		sb.append(this.condition.toCode());
+		sb.append(" do\n");
+		sb.append(this.block.toCode());
+		sb.append(intend);
+		sb.append("end\n");
+
+		return sb.toString();
 	}
 
 }

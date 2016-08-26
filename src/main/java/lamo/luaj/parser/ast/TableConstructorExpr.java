@@ -1,6 +1,8 @@
 package lamo.luaj.parser.ast;
 
-public class TableConstructorExpr implements Expr {
+import lamo.luaj.util.ArrayUtil;
+
+public class TableConstructorExpr extends Expr {
 
 	private Field[] fields;
 
@@ -12,26 +14,16 @@ public class TableConstructorExpr implements Expr {
 		this.fields = fields;
 	}
 
-	public String toString() {
+	public String toCode() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("{");
-		if (this.fields != null) {
-			boolean first = true;
-			for (Field f : this.fields) {
-				if (first) {
-					first = false;
-				} else {
-					sb.append(", ");
-				}
-				sb.append(f.toString());
-			}
-		}
+		sb.append(ArrayUtil.join(this.fields, CODE_SERIALIZOR, ", "));
 		sb.append("}");
 
 		return sb.toString();
 	}
 
-	static abstract public class Field {
+	static abstract public class Field extends Node {
 
 		private Expr value;
 
@@ -65,8 +57,8 @@ public class TableConstructorExpr implements Expr {
 			this.index = index;
 		}
 
-		public String toString() {
-			return this.getValue().toString();
+		public String toCode() {
+			return this.getValue().toCode();
 		}
 
 	}
@@ -88,8 +80,8 @@ public class TableConstructorExpr implements Expr {
 			this.key = key;
 		}
 
-		public String toString() {
-			return this.key + " = " + this.getValue().toString();
+		public String toCode() {
+			return this.key + " = " + this.getValue().toCode();
 		}
 
 	}
@@ -111,8 +103,8 @@ public class TableConstructorExpr implements Expr {
 			this.key = key;
 		}
 
-		public String toString() {
-			return "[" + this.key.toString() + "]" + " = " + this.getValue().toString();
+		public String toCode() {
+			return "[" + this.key.toCode() + "]" + " = " + this.getValue().toCode();
 		}
 
 	}

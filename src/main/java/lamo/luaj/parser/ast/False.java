@@ -1,8 +1,8 @@
 package lamo.luaj.parser.ast;
 
-public class False implements Expr {
+public class False extends Expr {
 
-	public String toString() {
+	public String toCode() {
 		return "false";
 	}
 

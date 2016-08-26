@@ -1,6 +1,8 @@
 package lamo.luaj.parser.ast;
 
-public class PrimaryExpr implements Expr {
+import lamo.luaj.util.ArrayUtil;
+
+public class PrimaryExpr extends Expr {
 
 	private Expr prefixExpr;
 	private Segment[] segments;
@@ -27,19 +29,19 @@ public class PrimaryExpr implements Expr {
 			&& !(segments[segments.length - 1] instanceof FieldSegment);
 	}
 
-	public String toString() {
+	public String toCode() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(this.prefixExpr);
+		sb.append(this.prefixExpr.toCode());
 		if (this.segments != null) {
 			for (Segment seg : this.segments) {
-				sb.append(seg);
+				sb.append(seg.toCode());
 			}
 		}
 
 		return sb.toString();
 	}
 
-	static public abstract class Segment {
+	static public abstract class Segment extends Node {
 	}
 
 	static public class FieldSegment extends Segment {
@@ -54,7 +56,7 @@ public class PrimaryExpr implements Expr {
 			this.key = key;
 		}
 
-		public String toString() {
+		public String toCode() {
 			return "[" + key + "]";
 		}
 
@@ -72,18 +74,10 @@ public class PrimaryExpr implements Expr {
 			this.args = args;
 		}
 
-		public String toString() {
+		public String toCode() {
 			StringBuilder sb = new StringBuilder();
 			sb.append("(");
-			boolean first = true;
-			for (Expr arg : this.args) {
-				if (first) {
-					first = false;
-				} else {
-					sb.append(", ");
-				}
-				sb.append(arg);
-			}
+			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZOR, ", "));
 			sb.append(")");
 
 			return sb.toString();
@@ -112,20 +106,12 @@ public class PrimaryExpr implements Expr {
 			this.args = args;
 		}
 
-		public String toString() {
+		public String toCode() {
 			StringBuilder sb = new StringBuilder();
 			sb.append(":");
 			sb.append(this.key);
 			sb.append("(");
-			boolean first = true;
-			for (Expr arg : this.args) {
-				if (first) {
-					first = false;
-				} else {
-					sb.append(", ");
-				}
-				sb.append(arg);
-			}
+			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZOR, ", "));
 			sb.append(")");
 
 			return sb.toString();

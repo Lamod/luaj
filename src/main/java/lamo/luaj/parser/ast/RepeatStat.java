@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class RepeatStat implements Stat {
+public class RepeatStat extends Stat {
 
 	private Expr condition;
 	private Block block;
@@ -24,6 +24,21 @@ public class RepeatStat implements Stat {
 
 	public void setBlock(Block block) {
 		this.block = block;
+	}
+
+	public String toCode() {
+		StringBuilder sb = new StringBuilder();
+		String intend = getIntend();
+		
+		sb.append(intend);
+		sb.append("repeat\n");
+		sb.append(this.block.toCode());
+		sb.append(intend);
+		sb.append("until ");
+		sb.append(this.condition.toCode());
+		sb.append("\n");
+
+		return sb.toString();
 	}
 
 }

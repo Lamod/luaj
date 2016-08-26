@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class NumbericForStat implements Stat {
+public class NumbericForStat extends Stat {
 
 	private String varName;
 	private Expr initExpr, limitExpr, stepExpr;
@@ -53,6 +53,29 @@ public class NumbericForStat implements Stat {
 
 	public void setBlock(Block block) {
 		this.block = block;
+	}
+
+	public String toCode() {
+		StringBuilder sb = new StringBuilder();
+		String intend = getIntend();
+
+		sb.append(intend);
+		sb.append("for ");
+		sb.append(this.varName);
+		sb.append(" = ");
+		sb.append(this.initExpr.toCode());
+		sb.append(", ");
+		sb.append(this.limitExpr.toCode());
+		if (this.stepExpr != null) {
+			sb.append(", ");
+			sb.append(this.stepExpr.toCode());
+		}
+		sb.append(" do\n");
+		sb.append(this.block.toCode());
+		sb.append(intend);
+		sb.append("end\n");
+
+		return sb.toString();
 	}
 
 }

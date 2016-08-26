@@ -1,6 +1,8 @@
 package lamo.luaj.parser.ast;
 
-public class GenericForStat implements Stat {
+import lamo.luaj.util.ArrayUtil;
+
+public class GenericForStat extends Stat {
 
 	private String[] nameList;
 	private Expr[] exprList;
@@ -34,6 +36,23 @@ public class GenericForStat implements Stat {
 
 	public void setBlock(Block block) {
 		this.block = block;
+	}
+
+	public String toCode() {
+		StringBuilder sb = new StringBuilder();
+		String intend = getIntend();
+
+		sb.append(intend);
+		sb.append("for ");
+		sb.append(ArrayUtil.join(this.nameList, ", "));
+		sb.append(" in ");
+		sb.append(ArrayUtil.join(this.exprList, CODE_SERIALIZOR, ", "));
+		sb.append(" do\n");
+		sb.append(this.block.toCode());
+		sb.append(intend);
+		sb.append("end\n");
+
+		return sb.toString();
 	}
 
 }

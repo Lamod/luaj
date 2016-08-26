@@ -1,8 +1,8 @@
 package lamo.luaj.parser.ast;
 
-public class Nil implements Expr {
+public class Nil extends Expr {
 
-	public String toString() {
+	public String toCode() {
 		return "nil";
 	}
 
