@@ -11,6 +11,7 @@ public class Parser implements Closeable {
 
 	private Lexer input;
 	private Token current, lookahead;
+	private Block currentBlock;
 
 	public Parser(String name, Reader reader) throws ParserException {
 		this(new Lexer(name, reader));
@@ -31,17 +32,22 @@ public class Parser implements Closeable {
 
 	private Chunk parseChunk() throws ParserException {
 		Chunk chunk = new Chunk();
+		enterBlock(chunk);
+
 		chunk.setStatements(parseStats().getStats());
 		if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
 			chunk.setLastStat(parseLastStat());
 			tryMatch(TType.SEMICOLON);
 		}
 
+		leaveBlock();
 		return chunk;
 	}
 
 	private Block parseBlock(TType... terminators) throws ParserException {
 		Block block = new Block();
+		enterBlock(block);
+
 		StatsResult result = parseStats(terminators);
 		block.setStatements(result.getStats());
 		if (result.terminator == null) {
@@ -50,6 +56,8 @@ public class Parser implements Closeable {
 				tryMatch(TType.SEMICOLON);
 			}
 		}
+
+		leaveBlock();
 
 		return block;
 	}
@@ -85,12 +93,13 @@ public class Parser implements Closeable {
 	}
 
 	private Stat parseStat() throws ParserException {
+		Stat stat = null;
 		switch (current.getType()) {
 			case DO: {
 				consume();
-				BlockStat bs = new BlockStat(parseBlock(TType.END));
+				stat = new BlockStat(parseBlock(TType.END));
 				match(TType.END);
-				return bs;
+				break;
 			}
 			case WHILE: {
 				consume();
@@ -98,14 +107,16 @@ public class Parser implements Closeable {
 				match(TType.DO);
 				Block b= parseBlock(TType.END);
 				match(TType.END);
-				return new WhileStat(c, b);
+				stat = new WhileStat(c, b);
+				break;
 			}
 			case REPEAT: {
 				consume();
 				Block b = parseBlock(TType.UNTIL);
 				match(TType.UNTIL);
 				Expr c = parseExpr();
-				return new RepeatStat(c, b);
+				stat = new RepeatStat(c, b);
+				break;
 			}
 			case IF: {
 				consume();
@@ -128,7 +139,8 @@ public class Parser implements Closeable {
 				}
 				
 				match(TType.END);
-				return s;
+				stat = s;
+				break;
 			}
 			case FOR:
 				consume();
@@ -147,17 +159,19 @@ public class Parser implements Closeable {
 					match(TType.DO);
 					Block b = parseBlock(TType.END);
 					match(TType.END);
-					return new NumbericForStat(n, init, limit, step, b);
+					stat = new NumbericForStat(n, init, limit, step, b);
 				} else {
 					String[] nl = parseNames();
 					Expr[] el = parseExprs();
 					match(TType.DO);
 					Block b = parseBlock(TType.END);
 					match(TType.END);
-					return new GenericForStat(nl, el, b);
+					stat = new GenericForStat(nl, el, b);
 				}
+				break;
 			case FUNCTION:
-				return parseFuncStat();
+				stat = parseFuncStat();
+				break;
 			case LOCAL:
 				if (testLookahead(TType.FUNCTION)) {
 					consume(); // 'local'
@@ -165,16 +179,20 @@ public class Parser implements Closeable {
 					String name = match(TType.NAME).getText();
 					FuncExpr func = new FuncExpr(parseFuncBody());
 
-					LocalStat stat = new LocalStat();
-					stat.setNames(new String[]{ name });
-					stat.setExprs(new Expr[]{ func });
-					return stat;
+					LocalStat ls = new LocalStat();
+					ls.setNames(new String[]{ name });
+					ls.setExprs(new Expr[]{ func });
+					stat = ls;
 				} else {
-					return parseLocalStat();
+					stat = parseLocalStat();
 				}
+				break;
 			default:
-				return parseExprStat();
+				stat = parseExprStat();
 		}
+
+		stat.setOwner(this.currentBlock);
+		return stat;
 	}
 
 	private FuncStat parseFuncStat() throws ParserException {
@@ -528,6 +546,17 @@ public class Parser implements Closeable {
 		} catch (LexerException e) {
 			throw new ParserException();
 		}
+	}
+
+	private void enterBlock(Block block) {
+		int level = this.currentBlock != null ? this.currentBlock.getLevel() + 1 : 0;
+		block.setLevel(level);
+		block.setParent(this.currentBlock);
+		this.currentBlock = block;
+	}
+
+	private void leaveBlock() {
+		this.currentBlock = this.currentBlock.getParent();
 	}
 
 	private static class StatsResult {

@@ -6,6 +6,7 @@ public class Block extends Node {
 
 	private int level;
 	private String intend;
+	private Block parent;
 
 	private Stat[] statements;
 	private LastStat lastStat;
@@ -35,7 +36,7 @@ public class Block extends Node {
 		if (level == 0) {
 			this.intend = "";
 		} else {
-			char[] spaces = new char[this.level * 4];
+			char[] spaces = new char[this.level * INDENT_SIZE];
 			Arrays.fill(spaces, ' ');
 			this.intend = new String(spaces);
 		}
@@ -43,6 +44,14 @@ public class Block extends Node {
 
 	public String getIntend() {
 		return this.intend;
+	}
+
+	public Block getParent() {
+		return this.parent;
+	}
+
+	public void setParent(Block parent) {
+		this.parent = parent;
 	}
 
 	public String toCode() {
