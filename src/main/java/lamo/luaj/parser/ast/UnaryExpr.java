@@ -5,6 +5,8 @@ import lamo.luaj.parser.Token.TType;
 
 public class UnaryExpr implements Expr {
 
+	static public final int OP_PRIORITY = 8;
+
 	public enum Operator {
 		NEGATIVE("-"), LENGTH("#"), NOT("not");
 

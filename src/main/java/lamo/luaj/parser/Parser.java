@@ -297,11 +297,15 @@ public class Parser implements Closeable {
 	}
 
 	private Expr parseExpr() throws ParserException {
+		return parseSubexpr(0);
+	}	
+
+	private Expr parseSubexpr(int limit) throws ParserException {
 		Expr expr = null;
 		UnaryExpr.Operator uop = UnaryExpr.getOperator(current);
 		if (uop != null) {
 			consume();
-			Expr operand = parseExpr();
+			Expr operand = parseSubexpr(UnaryExpr.OP_PRIORITY);
 			UnaryExpr uexpr = new UnaryExpr();
 			uexpr.setOperator(uop);
 			uexpr.setOperand(operand);
@@ -311,14 +315,14 @@ public class Parser implements Closeable {
 		}
 
 		BinaryExpr.Operator bop = BinaryExpr.getOperator(current);
-		while (bop != null) {
+		while (bop != null && bop.getLeftPriority() > limit) {
 			consume();
-			expr = BinaryExpr.adjust(expr, bop, parseExpr());
+			expr = new BinaryExpr(expr, bop, parseSubexpr(bop.getRightPriority()));
 			bop = BinaryExpr.getOperator(current);
 		}
 
 		return expr;
-	}	
+	}
 
 	private Expr parseSimpleExpr() throws ParserException {
 		switch(current.getType()) {
@@ -354,10 +358,10 @@ public class Parser implements Closeable {
 		} else if (testCurrent(TType.LPARENT)) {
 			consume();
 			prefix = parseExpr();
-			match(TType.RPARENT);
 			if (prefix instanceof BinaryExpr) {
 				((BinaryExpr)prefix).setClosed(true);
 			}
+			match(TType.RPARENT);
 		} else {
 			throw new ParserException();
 		}

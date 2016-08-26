@@ -6,41 +6,31 @@ import lamo.luaj.parser.Token.TType;
 public class BinaryExpr implements Expr {
 
 	public enum Operator {
- 		OR(0, "or"),
-		AND(1, "and"),
-		GREATE_THAN(2, ">"), GREATE_EQUAL(2, ">="), LESS_THAN(2, "<"), LESS_EQUAL(2, "<="), EQUAL(2, "=="), NOT_EQUAL(2, "~="),
-		CONCAT(3, true, ".."),
-		ADD(4, "+"), MINUS(4, "-"),
-		MULTI(5, "*"), DIVIDE(5, "/"), MODE(5, "%"),
-		POWER(7, true, "^"), 
+ 		OR(1, 1, "or"),
+		AND(2, 2, "and"),
+		GREATE_THAN(3, 3, ">"), GREATE_EQUAL(3, 3, ">="), LESS_THAN(3, 3, "<"), LESS_EQUAL(3, 3, "<="),
+		EQUAL(3, 3, "=="), NOT_EQUAL(3, 3, "~="),
+		CONCAT(5, 4, ".."),
+		ADD(6, 6, "+"), MINUS(6, 6, "-"),
+		MULTI(7, 7, "*"), DIVIDE(7, 7, "/"), MODE(7, 7, "%"),
+		POWER(10, 9, "^"), 
 		;
 
-		private int precedence;
-		private boolean rightAssociative;
-		private String token;
+		private final int leftPriority, rightPriority;
+		private final String token;
 
-		private Operator(int precedence, String token) {
-			this.precedence = precedence;
-			this.rightAssociative = false;
+		private Operator(int left, int right, String token) {
+			this.leftPriority = left;
+			this.rightPriority = right;
 			this.token = token;
 		}
 
-		private Operator(int precedence, boolean rightAssociative, String token) {
-			this.precedence = precedence;
-			this.rightAssociative = rightAssociative;
-			this.token = token;
+		public int getLeftPriority() {
+			return this.leftPriority;
 		}
 
-		public int getPrecedence() {
-			return this.precedence;
-		}
-
-		public boolean isLeftAssocitive() {
-			return !this.rightAssociative;
-		}
-
-		public boolean isRightAssocitive() {
-			return this.rightAssociative;
+		public int getRightPriority() {
+			return this.rightPriority;
 		}
 
 		public String getToken() {
@@ -77,17 +67,9 @@ public class BinaryExpr implements Expr {
 		}
 	}
 
-	static public BinaryExpr adjust(Expr left, Operator op, Expr right) {
-		if (left instanceof BinaryExpr && !((BinaryExpr)left).getClosed()) {
-			return ((BinaryExpr)left).adjust(op, right);
-		} else {
-			return new BinaryExpr(left, op, right);
-		}
-	}
-
 	private Expr left, right;
 	private Operator operator;
-	private boolean closed = false;
+	private boolean closed;
 
 	public BinaryExpr(Expr left, Operator op, Expr right) {
 		this.left = left;
@@ -131,29 +113,6 @@ public class BinaryExpr implements Expr {
 
 	public void setClosed(boolean closed) {
 		this.closed = closed;
-	}
-
-	private BinaryExpr adjust(Operator op, Expr expr) {
-		if (op.precedence < this.operator.precedence) {
-			return adjustToLeft(op, expr);
-		} else if (op.precedence > this.operator.precedence) {
-			return adjustToRight(op, expr);
-		} else if (op.isRightAssocitive()) {
-			return adjustToRight(op, expr);
-		} else {
-			return adjustToLeft(op, expr);
-		}
-	}
-
-	private BinaryExpr adjustToRight(Operator op, Expr expr) {
-		return new BinaryExpr(this, op, expr);
-	}
-
-	private BinaryExpr adjustToLeft(Operator op, Expr expr) {
-		BinaryExpr newExpr = new BinaryExpr(this.left, op, expr);
-		this.left = newExpr;
-
-		return this;	
 	}
 
 	public String toString() {
