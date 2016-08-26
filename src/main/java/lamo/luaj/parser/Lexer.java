@@ -152,7 +152,6 @@ public class Lexer implements Closeable {
                     if (t != null) {
                         return t;
                     }
-                    consume();
                     if (current != '.') {
                         return new Token(TType.DOT);
                     }

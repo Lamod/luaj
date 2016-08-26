@@ -266,7 +266,7 @@ public class Parser implements Closeable {
 			if (testCurrent(TType.NAME)) {
 				parlist.setParams(parseNameList());
 			}
-			if (testCurrent(TType.DOTS)) {
+			if (tryMatch(TType.DOTS) != null) {
 				parlist.setIsVarargs(true);
 			}
 
@@ -340,6 +340,7 @@ public class Parser implements Closeable {
 			case STRING:
 				return new LiteralString(consume().getText());
 			case DOTS:
+				consume();
 				return new VarargExpr();
 			case FUNCTION:
 				consume();
