@@ -2,6 +2,7 @@ package lamo.luaj.parser;
 
 import lamo.luaj.parser.ast.*;
 import lamo.luaj.parser.Token.TType;
+import lamo.luaj.util.ArrayUtil;
 
 import java.io.Reader;
 import java.io.Closeable;
@@ -34,11 +35,7 @@ public class Parser implements Closeable {
 		Chunk chunk = new Chunk();
 		enterBlock(chunk);
 
-		chunk.setStatements(parseStats().getStats());
-		if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
-			chunk.setLastStat(parseLastStat());
-			tryMatch(TType.SEMICOLON);
-		}
+        chunk.setStatements(parseStats());
 
 		leaveBlock();
 		return chunk;
@@ -48,53 +45,48 @@ public class Parser implements Closeable {
 		Block block = new Block();
 		enterBlock(block);
 
-		StatsResult result = parseStats(terminators);
-		block.setStatements(result.getStats());
-		if (result.terminator == null) {
-			if (testCurrent(TType.RETURN) || testCurrent(TType.BREAK)) {
-				block.setLastStat(parseLastStat());
-				tryMatch(TType.SEMICOLON);
-			}
-		}
+        block.setStatements(parseStats(terminators));
 
 		leaveBlock();
-
 		return block;
 	}
 
-	private StatsResult parseStats(TType... terminators) throws ParserException {
+	private Stat[] parseStats(TType... terminators) throws ParserException {
 		ArrayList<Stat> statList = new ArrayList<>();
-		TType terminator = null;
+        Stat stat = null;
 
-		parseStat:
 		while (!testCurrent(TType.EOF)) {
-			for (TType t : terminators) {
-				if (current.getType() == t) {
-					terminator = t;
-					break parseStat;
-				}
-			}
-			statList.add(parseStat());
-			tryMatch(TType.SEMICOLON);
+            if (terminators != null && ArrayUtil.contains(terminators, current.getType())) {
+                break;
+            }
+            stat = parseStat(terminators);
+            statList.add(stat);
+            tryMatch(TType.SEMICOLON);
+            if (stat instanceof LastStat) {
+                break;
+            }
 		}
 
-		Stat[] stats = statList.size() > 0 ? statList.toArray(new Stat[statList.size()]) : null;
-
-		return new StatsResult(stats, terminator);
+		return statList.size() > 0 ? statList.toArray(new Stat[statList.size()]) : null;
 	}
 
-	private LastStat parseLastStat() throws ParserException {
-		if (testCurrent(TType.BREAK)) {
-			return new BreakStat();
-		} else {
-			match(TType.RETURN);
-			return new ReturnStat(parseExprs());
-		}
-	}
-
-	private Stat parseStat() throws ParserException {
+	private Stat parseStat(TType... terminators) throws ParserException {
 		Stat stat = null;
 		switch (current.getType()) {
+            case BREAK:
+                consume();
+                stat = new BreakStat();
+                break;
+            case RETURN: {
+                consume();
+                ReturnStat rs = new ReturnStat();
+                if (!ArrayUtil.contains(terminators, current.getType())
+                        && current.getType() != TType.SEMICOLON) {
+                    rs.setExprs(parseExprs());
+                }
+                stat = rs;
+                break;
+            }
 			case DO: {
 				consume();
 				stat = new BlockStat(parseBlock(TType.END));
@@ -162,6 +154,7 @@ public class Parser implements Closeable {
 					stat = new NumbericForStat(n, init, limit, step, b);
 				} else {
 					String[] nl = parseNames();
+                    match(TType.IN);
 					Expr[] el = parseExprs();
 					match(TType.DO);
 					Block b = parseBlock(TType.END);
@@ -390,6 +383,7 @@ public class Parser implements Closeable {
 		while (true) {
 			switch (current.getType()) {
 				case DOT: {
+                    consume();
 					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
 					seg.setKey(new LiteralString(consume().getText()));
 					segmentList.add(seg);
@@ -400,6 +394,7 @@ public class Parser implements Closeable {
 					consume();
 					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
 					seg.setKey(parseExpr());
+					match(TType.RBRACKET);
 					segmentList.add(seg);
 
 					break;
@@ -502,7 +497,7 @@ public class Parser implements Closeable {
 					break;
 				}
 			}
-		} while (tryMatch(TType.COMMA) != null || tryMatch(TType.SEMICOLON) != null);
+		} while ((tryMatch(TType.COMMA) != null || tryMatch(TType.SEMICOLON) != null) && !testCurrent(TType.RBRACE));
 
 		return fields.toArray(new TableConstructorExpr.Field[fields.size()]);
 	}
@@ -557,26 +552,6 @@ public class Parser implements Closeable {
 
 	private void leaveBlock() {
 		this.currentBlock = this.currentBlock.getParent();
-	}
-
-	private static class StatsResult {
-
-		private Stat[] stats;
-		private TType terminator;
-
-		private StatsResult(Stat[] stats, TType terminator) {
-			this.stats = stats;
-			this.terminator = terminator;
-		}
-
-		private Stat[] getStats() {
-			return this.stats;
-		}
-
-		private TType getTerminator() {
-			return this.terminator;
-		}
-
 	}
 
 }

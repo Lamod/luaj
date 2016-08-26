@@ -57,6 +57,7 @@ public class BinaryExpr extends Expr {
 			case LESS_EQUAL: return Operator.LESS_EQUAL;
 			case EQUAL: return Operator.EQUAL;
 			case NOT_EQUAL: return Operator.NOT_EQUAL;
+			case CONCAT: return Operator.CONCAT;
 			case ADD: return Operator.ADD;
 			case MINUS: return Operator.MINUS;
 			case MULTI: return Operator.MULTI;

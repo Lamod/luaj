@@ -42,7 +42,7 @@ public class IfStat extends Stat {
 			} else {
 				sb.append("elseif ");
 				sb.append(branch.getCondition().toCode());
-				sb.append(" then");
+				sb.append(" then\n");
 			}
 			sb.append(branch.getBlock().toCode());
 		}

@@ -6,10 +6,6 @@ public class ReturnStat extends LastStat {
 
 	private Expr[] exprs;
 
-	public ReturnStat(Expr[] exprs) {
-		this.exprs = exprs;
-	}
-
 	public Expr[] getExprs() {
 		return this.exprs;
 	}
@@ -22,10 +18,12 @@ public class ReturnStat extends LastStat {
 		StringBuilder sb = new StringBuilder();
 
 		sb.append(getIntend());
-		sb.append("return ");
+		sb.append("return");
 		if (this.exprs != null) {
+			sb.append(" ");
 			sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZOR, ", "));
 		}
+		sb.append("\n");
 
 		return sb.toString();
 	}

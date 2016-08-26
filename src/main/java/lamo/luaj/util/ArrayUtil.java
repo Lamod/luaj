@@ -34,4 +34,14 @@ public class ArrayUtil {
 		return sb.toString();
 	}
 
+	static public <T> boolean contains(T[] a, T e) {
+		for (T t : a) {
+			if (t == e || t.equals(e)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 }

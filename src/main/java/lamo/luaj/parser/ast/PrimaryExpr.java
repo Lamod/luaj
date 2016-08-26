@@ -57,7 +57,7 @@ public class PrimaryExpr extends Expr {
 		}
 
 		public String toCode() {
-			return "[" + key + "]";
+			return "[" + this.key.toCode() + "]";
 		}
 
 	}

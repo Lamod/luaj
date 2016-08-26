@@ -59,7 +59,7 @@ public class UnaryExpr extends Expr {
 	}
 
 	public String toCode() {
-		return this.operator.toString() + this.operand.toCode();
+		return this.operator.toString() + " " + this.operand.toCode();
 	}
 
 }

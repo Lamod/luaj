@@ -9,7 +9,6 @@ public class Block extends Node {
 	private Block parent;
 
 	private Stat[] statements;
-	private LastStat lastStat;
 
 	public Stat[] getStatements() {
 		return statements;
@@ -17,14 +16,6 @@ public class Block extends Node {
 
 	public void setStatements(Stat[] statements) {
 		this.statements = statements;
-	}
-
-	public LastStat getLastStat() {
-		return this.lastStat;
-	}
-
-	public void setLastStat(LastStat lastStat) {
-		this.lastStat = lastStat;
 	}
 
 	public int getLevel() {
@@ -55,12 +46,12 @@ public class Block extends Node {
 	}
 
 	public String toCode() {
-		if (statements == null) {
+		if (this.statements == null) {
 			return "";
 		}
 
 		StringBuilder sb = new StringBuilder();
-		for (Stat stat: statements) {
+		for (Stat stat: this.statements) {
 			sb.append(stat.toCode());
 		}
 

@@ -461,7 +461,12 @@ public class Lexer implements Closeable {
     }
 
     private boolean tryMatch(char x) {
-        return current == x;
+        if (current == x) {
+            consume();
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private char match(char x) throws LexerException {
