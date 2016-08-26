@@ -5,7 +5,7 @@ import lamo.luaj.util.ArrayUtil;
 public class LocalStat extends Stat {
 
 	private String[] names;
-	private Expr[] explist;
+	private Expr[] exprs;
 
 	public String[] getNames() {
 		return names;
@@ -15,12 +15,12 @@ public class LocalStat extends Stat {
 		this.names = names;
 	}
 
-	public Expr[] getExplist() {
-		return explist;
+	public Expr[] getExprs() {
+		return exprs;
 	}
 
-	public void setExplist(Expr[] explist) {
-		this.explist = explist;
+	public void setExprs(Expr[] exprs) {
+		this.exprs = exprs;
 	}
 
 	public String toCode() {
@@ -30,9 +30,9 @@ public class LocalStat extends Stat {
 		
 		sb.append(ArrayUtil.join(this.names, ", "));
 
-		if (explist != null && explist.length > 0) {
+		if (this.exprs != null && this.exprs.length > 0) {
 			sb.append(" = ");
-			sb.append(ArrayUtil.join(this.explist, CODE_SERIALIZOR, ", "));
+			sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZOR, ", "));
 		}
 		sb.append("\n");
 			

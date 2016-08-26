@@ -5,15 +5,15 @@ import lamo.luaj.util.ArrayUtil;
 
 public class IfStat extends Stat {
 
-	private ArrayList<Branch> branches = new ArrayList<Branch>();
+	private ArrayList<Branch> branchList = new ArrayList<Branch>();
 
-	public ArrayList<Branch> getBranches() {
-		return branches;
+	public ArrayList<Branch> getBranchList() {
+		return this.branchList;
 	}
 
 	public int append(Branch branch) {
-		if (branches.add(branch)) {
-			return branches.size() - 1;
+		if (this.branchList.add(branch)) {
+			return this.branchList.size() - 1;
 		} else {
 			return -1;
 		}
@@ -26,7 +26,7 @@ public class IfStat extends Stat {
 	public String toCode() {
 		StringBuilder sb = new StringBuilder();
 		String intend = getIntend();
-		Branch branch = this.branches.get(0);
+		Branch branch = this.branchList.get(0);
 
 		sb.append(intend);
 		sb.append("if ");
@@ -34,8 +34,8 @@ public class IfStat extends Stat {
 		sb.append(" then\n");
 		sb.append(branch.getBlock().toCode());
 
-		for (int i = 1; i < this.branches.size(); ++i) {
-			branch = this.branches.get(i);
+		for (int i = 1; i < this.branchList.size(); ++i) {
+			branch = this.branchList.get(i);
 			sb.append(intend);
 			if (branch.isElseBranch()) {
 				sb.append("else\n");

@@ -4,30 +4,30 @@ import lamo.luaj.util.ArrayUtil;
 
 public class GenericForStat extends Stat {
 
-	private String[] nameList;
-	private Expr[] exprList;
+	private String[] names;
+	private Expr[] exprs;
 	private Block block;
 
-	public GenericForStat(String[] nameList, Expr[] exprList, Block block) {
-		this.nameList = nameList;
-		this.exprList = exprList;
+	public GenericForStat(String[] names, Expr[] exprs, Block block) {
+		this.names = names;
+		this.exprs = exprs;
 		this.block = block;
 	}
 
-	public String[] getNameList() {
-		return this.nameList;
+	public String[] getNames() {
+		return this.names;
 	}
 
-	public void setNameList(String[] nameList) {
-		this.nameList = nameList;
+	public void setNames(String[] names) {
+		this.names = names;
 	}
 
-	public Expr[] getExprList() {
-		return this.exprList;
+	public Expr[] getExprs() {
+		return this.exprs;
 	}
 
-	public void setExprList(Expr[] exprList) {
-		this.exprList = exprList;
+	public void setExprs(Expr[] exprs) {
+		this.exprs = exprs;
 	}
 
 	public Block getBlock() {
@@ -44,9 +44,9 @@ public class GenericForStat extends Stat {
 
 		sb.append(intend);
 		sb.append("for ");
-		sb.append(ArrayUtil.join(this.nameList, ", "));
+		sb.append(ArrayUtil.join(this.names, ", "));
 		sb.append(" in ");
-		sb.append(ArrayUtil.join(this.exprList, CODE_SERIALIZOR, ", "));
+		sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZOR, ", "));
 		sb.append(" do\n");
 		sb.append(this.block.toCode());
 		sb.append(intend);

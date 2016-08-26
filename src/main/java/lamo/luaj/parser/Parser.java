@@ -55,7 +55,7 @@ public class Parser implements Closeable {
 	}
 
 	private StatsResult parseStats(TType... terminators) throws ParserException {
-		ArrayList<Stat> statList = new ArrayList<Stat>();
+		ArrayList<Stat> statList = new ArrayList<>();
 		TType terminator = null;
 
 		parseStat:
@@ -80,7 +80,7 @@ public class Parser implements Closeable {
 			return new BreakStat();
 		} else {
 			match(TType.RETURN);
-			return new ReturnStat(parseExplist());
+			return new ReturnStat(parseExprs());
 		}
 	}
 
@@ -149,8 +149,8 @@ public class Parser implements Closeable {
 					match(TType.END);
 					return new NumbericForStat(n, init, limit, step, b);
 				} else {
-					String[] nl = parseNameList();
-					Expr[] el = parseExplist();
+					String[] nl = parseNames();
+					Expr[] el = parseExprs();
 					match(TType.DO);
 					Block b = parseBlock(TType.END);
 					match(TType.END);
@@ -167,7 +167,7 @@ public class Parser implements Closeable {
 
 					LocalStat stat = new LocalStat();
 					stat.setNames(new String[]{ name });
-					stat.setExplist(new Expr[]{ func });
+					stat.setExprs(new Expr[]{ func });
 					return stat;
 				} else {
 					return parseLocalStat();
@@ -182,7 +182,7 @@ public class Parser implements Closeable {
 
 		FuncStat stat = new FuncStat();
 
-		ArrayList<String> segments = new ArrayList<String>();
+		ArrayList<String> segments = new ArrayList<>();
 		segments.add(match(TType.NAME).getText());
 
 		while (tryMatch(TType.COMMA) != null) {
@@ -203,13 +203,13 @@ public class Parser implements Closeable {
 		match(TType.LOCAL);
 
 		LocalStat stat = new LocalStat();
-		stat.setNames(parseNameList());
+		stat.setNames(parseNames());
 
 		if (tryMatch(TType.ASSIGN) == null) {
 			return stat;
 		}
 
-		stat.setExplist(parseExplist());
+		stat.setExprs(parseExprs());
 
 		return stat;
 	}
@@ -226,7 +226,7 @@ public class Parser implements Closeable {
 	private AssignStat parseAssignStat(PrimaryExpr var) throws ParserException {
 		AssignStat stat = new AssignStat();
 
-		ArrayList<PrimaryExpr> varList = new ArrayList<PrimaryExpr>();
+		ArrayList<PrimaryExpr> varList = new ArrayList<>();
 		varList.add(var);
 		while (tryMatch(TType.COMMA) != null) {
 			var = parsePrimaryExpr();
@@ -238,7 +238,7 @@ public class Parser implements Closeable {
 		stat.setVariables(varList.toArray(new PrimaryExpr[varList.size()]));
 
 		if (tryMatch(TType.ASSIGN) != null) {
-			stat.setValues(parseExplist());
+			stat.setValues(parseExprs());
 		}
 
 		return stat;
@@ -264,7 +264,7 @@ public class Parser implements Closeable {
 		if (testCurrent(TType.DOTS) || testCurrent(TType.NAME)) {
 			FuncBody.Parlist parlist = new FuncBody.Parlist();
 			if (testCurrent(TType.NAME)) {
-				parlist.setParams(parseNameList());
+				parlist.setParams(parseNames());
 			}
 			if (tryMatch(TType.DOTS) != null) {
 				parlist.setIsVarargs(true);
@@ -276,8 +276,8 @@ public class Parser implements Closeable {
 		}
 	}
 
-	private String[] parseNameList() throws ParserException {
-		ArrayList<String> names = new ArrayList<String>();
+	private String[] parseNames() throws ParserException {
+		ArrayList<String> names = new ArrayList<>();
 
 		do {
 			names.add(match(TType.NAME).getText());
@@ -286,8 +286,8 @@ public class Parser implements Closeable {
 		return names.toArray(new String[names.size()]);
 	}
 
-	private Expr[] parseExplist() throws ParserException {
-		ArrayList<Expr> exps = new ArrayList<Expr>();
+	private Expr[] parseExprs() throws ParserException {
+		ArrayList<Expr> exps = new ArrayList<>();
 
 		do {
 			exps.add(parseExpr());
@@ -367,7 +367,7 @@ public class Parser implements Closeable {
 			throw new ParserException();
 		}
 
-		ArrayList<PrimaryExpr.Segment> segmentList = new ArrayList<PrimaryExpr.Segment>();
+		ArrayList<PrimaryExpr.Segment> segmentList = new ArrayList<>();
 		loop:
 		while (true) {
 			switch (current.getType()) {
@@ -422,7 +422,7 @@ public class Parser implements Closeable {
 				consume();
 				Expr[] args = null;
 				if (tryMatch(TType.RPARENT) == null) {
-					args = parseExplist();
+					args = parseExprs();
 					match(TType.RPARENT);
 				}
 
@@ -443,15 +443,15 @@ public class Parser implements Closeable {
 		TableConstructorExpr constructor = new TableConstructorExpr();
 
 		if (tryMatch(TType.RBRACE) == null) {
-			constructor.setFields(parseFieldList());
+			constructor.setFields(parseFields());
 			match(TType.RBRACE);
 		}
 
 		return constructor;
 	}
 
-	private TableConstructorExpr.Field[] parseFieldList() throws ParserException {
-		ArrayList<TableConstructorExpr.Field> fields = new ArrayList<TableConstructorExpr.Field>();
+	private TableConstructorExpr.Field[] parseFields() throws ParserException {
+		ArrayList<TableConstructorExpr.Field> fields = new ArrayList<>();
 
 		do {
 			switch(current.getType()) {

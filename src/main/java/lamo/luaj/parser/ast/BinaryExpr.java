@@ -19,7 +19,7 @@ public class BinaryExpr extends Expr {
 		private final int leftPriority, rightPriority;
 		private final String token;
 
-		private Operator(int left, int right, String token) {
+		Operator(int left, int right, String token) {
 			this.leftPriority = left;
 			this.rightPriority = right;
 			this.token = token;

@@ -12,7 +12,7 @@ public class UnaryExpr extends Expr {
 
 		private String token;
 
-		private Operator(String token) {
+		Operator(String token) {
 			this.token = token;
 		}
 

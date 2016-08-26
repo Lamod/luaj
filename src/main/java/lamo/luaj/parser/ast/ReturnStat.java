@@ -4,18 +4,18 @@ import lamo.luaj.util.ArrayUtil;
 
 public class ReturnStat extends LastStat {
 
-	private Expr[] exprList;
+	private Expr[] exprs;
 
-	public ReturnStat(Expr[] exprList) {
-		this.exprList = exprList;
+	public ReturnStat(Expr[] exprs) {
+		this.exprs = exprs;
 	}
 
-	public Expr[] getExprList() {
-		return this.exprList;
+	public Expr[] getExprs() {
+		return this.exprs;
 	}
 
-	public void setExprList() {
-		this.exprList = exprList;
+	public void setExprs(Expr[] exprs) {
+		this.exprs = exprs;
 	}
 
 	public String toCode() {
@@ -23,8 +23,8 @@ public class ReturnStat extends LastStat {
 
 		sb.append(getIntend());
 		sb.append("return ");
-		if (this.exprList != null) {
-			sb.append(ArrayUtil.join(this.exprList, CODE_SERIALIZOR, ", "));
+		if (this.exprs != null) {
+			sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZOR, ", "));
 		}
 
 		return sb.toString();

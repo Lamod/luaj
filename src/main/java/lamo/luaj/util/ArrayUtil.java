@@ -3,7 +3,7 @@ package lamo.luaj.util;
 public class ArrayUtil {
 
 	public interface Serializor {
-		public String serialize(Object o);
+		String serialize(Object o);
 	}
 
 	static public String join(Object[] a, String sep) {
