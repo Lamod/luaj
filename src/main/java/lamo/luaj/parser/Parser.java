@@ -475,17 +475,17 @@ public class Parser implements Closeable {
 					match(TType.ASSIGN);
 					Expr value = parseExpr();
 
-					fields.add(new TableConstructorExpr.ExprField(key, value));
+					fields.add(new TableConstructorExpr.RecField(key, value));
 
 					break;
 				}
 				case NAME: {
 					if (testLookahead(TType.ASSIGN)) {
-						String key = consume().getText();
+						LiteralString key = new LiteralString(consume().getText());
 						match(TType.ASSIGN);
 						Expr value = parseExpr();
 
-						fields.add(new TableConstructorExpr.NameField(key, value));
+						fields.add(new TableConstructorExpr.RecField(key, value));
 
 						break;
 					} else {

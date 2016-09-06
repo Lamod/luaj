@@ -63,34 +63,11 @@ public class TableConstructorExpr extends Expr {
 
 	}
 
-	static public class NameField extends Field {
-
-		private String key;
-
-		public NameField(String key, Expr value) {
-			super(value);
-			this.key = key;
-		}
-
-		public String getKey() {
-			return this.key;
-		}
-
-		public void setKey(String key) {
-			this.key = key;
-		}
-
-		public String toCode() {
-			return this.key + " = " + this.getValue().toCode();
-		}
-
-	}
-
-	static public class ExprField extends Field {
+	static public class RecField extends Field {
 
 		private Expr key;
 
-		public ExprField(Expr key, Expr value) {
+		public RecField(Expr key, Expr value) {
 			super(value);
 			this.key = key;
 		}
