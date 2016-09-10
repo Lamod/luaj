@@ -5,7 +5,7 @@ import lamo.luaj.util.ArrayUtil;
 public class FuncBody extends Node {
 
 	private Parlist parlist;
-	private Block block;
+	private Chunk chunk;
 
 	public void setParlist(Parlist parlist) {
 		this.parlist = parlist;
@@ -15,12 +15,12 @@ public class FuncBody extends Node {
 		return parlist;
 	}
 
-	public void setBlock(Block block) {
-		this.block = block;
+	public void setChunk(Chunk chunk) {
+		this.chunk = chunk;
 	}
 
-	public Block getBlock() {
-		return block;
+	public Chunk getChunk() {
+		return chunk;
 	}
 
 	public String toCode() {
@@ -31,7 +31,7 @@ public class FuncBody extends Node {
 		}
 		sb.append(")");
 		sb.append("\n");
-		sb.append(this.block.toCode());
+		sb.append(this.chunk.toCode());
 
 		return sb.toString();
 	}

@@ -20,7 +20,7 @@ public class FuncExpr extends Expr {
 		StringBuilder sb = new StringBuilder();
 		sb.append("function");
 		sb.append(this.body.toCode());
-		sb.append(this.body.getBlock().getIntend().substring(INDENT_SIZE));
+		sb.append(this.body.getChunk().getIntend().substring(INDENT_SIZE));
 		sb.append("end");
 
 		return sb.toString();

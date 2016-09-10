@@ -31,11 +31,11 @@ public class Parser implements Closeable {
 		return parseChunk();
 	}
 
-	private Chunk parseChunk() throws ParserException {
+	private Chunk parseChunk(TType... terminators) throws ParserException {
 		Chunk chunk = new Chunk();
 		enterBlock(chunk);
 
-        chunk.setStatements(parseStats());
+        chunk.setStatements(parseStats(terminators));
 
 		leaveBlock();
 		return chunk;
@@ -265,7 +265,7 @@ public class Parser implements Closeable {
 			match(TType.RPARENT);
 		}
 
-		body.setBlock(parseBlock(TType.END));
+		body.setChunk(parseChunk(TType.END));
 		match(TType.END);
 
 		return body;
