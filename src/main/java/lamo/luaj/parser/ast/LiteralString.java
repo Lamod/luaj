@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-public class LiteralString extends Expr {
+public class LiteralString extends KExpr {
 
 	private String text;
 

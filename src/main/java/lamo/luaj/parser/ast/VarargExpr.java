@@ -6,4 +6,8 @@ public class VarargExpr extends Expr {
 		return "...";
 	}
 
+	public boolean hasMultRet() {
+		return true;
+	}
+
 }

@@ -29,6 +29,10 @@ public class PrimaryExpr extends Expr {
 			&& !(segments[segments.length - 1] instanceof FieldSegment);
 	}
 
+	public boolean hasMultRet() {
+		return isFuncCallExpr();
+	}
+
 	public String toCode() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(this.prefixExpr.toCode());

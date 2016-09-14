@@ -28,6 +28,21 @@ public class Instruction {
 		return ~mask1(n, p);
 	}
 
+	static public final int BIT_RK = 1 << (SIZE_B - 1);
+	static public final int MAX_INDEX_RK = BIT_RK - 1;
+
+	static public boolean isK(int segment) {
+		return (segment & BIT_RK) > 0;
+	}
+
+	static public boolean indexK(int segment) {
+		return (segment & ~BIT_RK) > 0;
+	}
+
+	static public int setAsK(int instruction) {
+		return instruction | BIT_RK;
+	}
+
 	private int value;
 
 	// TODO: check format
@@ -36,25 +51,17 @@ public class Instruction {
 	}
 
 	public Instruction(OpCode code, int a, int b, int c) {
+		assert(code.getOpMode() == OpCode.OpMode.iABC);
 		this.value = code.getIndex() | a << POS_A | b << POS_B | c << POS_C;
 	}
 
 	public Instruction(OpCode code, int a, int bx) {
+		assert(code.getOpMode() != OpCode.OpMode.iABC);
 		this.value = code.getIndex() | a << POS_A | bx << POS_Bx;
 	}
 
 	public int getValue() {
 		return value;
-	}
-
-	private int getSegment(int pos, int size) {
-		return (value >> pos) & mask1(size, pos);
-	}
-
-	private int setSegment(int v, int pos, int size) {
-		assert(v <= (1 << size) - 1);
-
-		return (value & mask0(size, pos)) | ((v << pos) & mask1(size, pos));
 	}
 
 	public OpCode getOpCode() {
@@ -107,19 +114,23 @@ public class Instruction {
 		return setBx(sbx + MAX_sBx);
 	}
 
-	static public final int BIT_RK = 1 << (SIZE_B - 1);
-	static public final int MAX_INDEX_RK = BIT_RK - 1;
-
-	static public boolean isK(int segment) {
-		return (segment & BIT_RK) > 0;
+	public String toString() {
+		OpCode op = getOpCode();
+		if (op.getOpMode() == OpCode.OpMode.iABC) {
+			return op.toString() + " " + getA() + " " + getB() + " " + getC();
+		} else {
+			return op.toString() + " " + getA() + " " + getBx();
+		}
 	}
 
-	static public boolean indexK(int segment) {
-		return (segment & ~BIT_RK) > 0;
+	private int getSegment(int pos, int size) {
+		return (value >> pos) & mask1(size, 0);
 	}
 
-	static public int setAsK(int instruction) {
-		return instruction | BIT_RK;
+	private int setSegment(int v, int pos, int size) {
+		assert(v <= (1 << size) - 1);
+
+		return (value & mask0(size, pos)) | ((v << pos) & mask1(size, pos));
 	}
 
 }
