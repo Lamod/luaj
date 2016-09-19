@@ -1,3 +1,9 @@
 package lamo.luaj.parser.ast;
 
-public abstract class KExpr extends Expr { }
+import lamo.luaj.LValue;
+
+public abstract class KExpr extends Expr {
+
+	public abstract LValue toLuaValue();
+
+}

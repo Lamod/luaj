@@ -1,5 +1,8 @@
 package lamo.luaj.parser.ast;
 
+import lamo.luaj.LString;
+import lamo.luaj.LValue;
+
 public class LiteralString extends KExpr {
 
 	private String text;
@@ -18,6 +21,10 @@ public class LiteralString extends KExpr {
 
 	public String toCode() {
 		return "\"" + text + "\"";
+	}
+
+	public LValue toLuaValue() {
+		return new LString(this.text);
 	}
 
 }

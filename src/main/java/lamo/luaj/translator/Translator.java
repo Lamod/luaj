@@ -110,10 +110,7 @@ public class Translator {
 				}
 				if (e.hasMultRet()) {
 					Instruction last = ArrayUtil.get(getCode(), -1);
-					setReturns(last, extra > 0 ? extra + 1 : 0);
-					if (extra > 0) {
-						this.freeReg += extra;
-					}
+					setReturns(last, extra >= 0 ? extra + 1 : 0);
 					extra = 0;
 				}
 			}
@@ -128,20 +125,19 @@ public class Translator {
 			closeScope();
 		} else if (stat instanceof FuncStat) {
 			FuncStat fs = (FuncStat)stat;
-			translatFuncBody(fs.getBody());
+			int reg = translatFuncBody(fs.getBody());
 			int nup = ArrayUtil.get(this.children, -1).upvalues.size();
 			Instruction inst = ArrayUtil.get(getCode(), -(nup + 1));
-			int a = inst.getA();
 			VarInfo info = translatVar(fs.getName().getVar());
 			switch (info.type) {
 				case VarInfo.LOCAL:
 					inst.setA(info.index);
 					break;
 				case VarInfo.UPVALUE:
-					instruction(new Instruction(OpCode.SETUPVALUE, info.index, a, 0));
+					instruction(new Instruction(OpCode.SETUPVALUE, info.index, reg, 0));
 					break;
 				case VarInfo.GLOBAL:
-					instruction(new Instruction(OpCode.SETGLOBAL, info.index, a));
+					instruction(new Instruction(OpCode.SETGLOBAL, info.index, reg));
 					break;
 				default:
 					assert(false);
@@ -161,10 +157,10 @@ public class Translator {
 				if (e.hasMultRet()) {
 					Instruction last = ArrayUtil.get(getCode(), -1);
 					if (last.getOpCode() == OpCode.CALL) {
+						setReturns(last, -1);
 						if (es.length == 1) {
 							last.setOpCode(OpCode.TAILCALL);
 						}
-						setReturns(last, -1);
 					}
 					nret = -1;
 				}
@@ -173,7 +169,7 @@ public class Translator {
 		}
 	}
 
-	private void translatFuncBody(FuncBody body) {
+	private int translatFuncBody(FuncBody body) {
 		Translator t = new Translator(body.getChunk(), this);
 		if (body.isNeedSelf()) {
 			t.addLocalVar("self");
@@ -185,8 +181,9 @@ public class Translator {
 		}
 
 		Proto p = t.translat();
+		int reg = this.freeReg++;
 		this.ps.add(p);
-		instruction(new Instruction(OpCode.CLOSURE, this.freeReg++, this.ps.size() - 1));
+		instruction(new Instruction(OpCode.CLOSURE, reg, this.ps.size() - 1));
 		UpValue uv;
 		for (int i = 0; i < t.upvalues.size(); ++i) {
 			uv = t.upvalues.get(i);
@@ -196,9 +193,19 @@ public class Translator {
 				instruction(new Instruction(OpCode.GETUPVALUE, i, uv.index, 0));
 			}
 		}
+
+		return reg;
 	}
 
-	private void translatExpr(Expr e) {
+	private int translatRK(Expr e) {
+		if (e instanceof KExpr) {
+			return Instruction.setAsK(addK(((KExpr) e).toLuaValue()));
+		} else {
+			return translatExpr(e);
+		}
+	}
+
+	private int translatExpr(Expr e) {
 		if (e instanceof KExpr) {
 			translatKExpr((KExpr)e);
 		} else if (e instanceof PrimaryExpr) {
@@ -215,6 +222,7 @@ public class Translator {
 		} else if (e instanceof VarargExpr) {
 
 		}
+		return this.freeReg - 1;
 	}
 
 	private VarInfo translatVar(Var var) {
@@ -223,52 +231,50 @@ public class Translator {
 
 	private void translatPrimaryExpr(PrimaryExpr expr) {
 		Expr prefixExpr = expr.getPrefixExpr();
+		int base;
 		if (prefixExpr instanceof Var) {
+			base = this.freeReg++;
 			Var var = (Var)prefixExpr;
 			VarInfo info = translatVar(var);
 			switch (info.type) {
 				case VarInfo.LOCAL:
-					move(this.freeReg++, info.index);
+					move(base, info.index);
 					break;
 				case VarInfo.UPVALUE: {
 					UpValue uv = this.upvalues.get(info.index);
 					if (uv.inSameLevel) {
-						move(this.freeReg++, uv.index);
+						move(base, uv.index);
 					} else {
-						instruction(new Instruction(OpCode.GETUPVALUE, this.freeReg++, uv.index, 0));
+						instruction(new Instruction(OpCode.GETUPVALUE, base, uv.index, 0));
 					}
 					break;
 				}
 				case VarInfo.GLOBAL: {
 					int idx = addKString(var.getName());
-					instruction(new Instruction(OpCode.GETGLOBAL, this.freeReg++, idx));
+					instruction(new Instruction(OpCode.GETGLOBAL, base, idx));
 					break;
 				}
 				default:
 					assert(false);
 			}
 		} else {
-			translatExpr(prefixExpr);
+			base = translatExpr(prefixExpr);
 		}
 		PrimaryExpr.Segment[] segs = expr.getSegments();
 		if (segs != null) {
 			for (PrimaryExpr.Segment seg : segs) {
-				translatSegment(seg);
+				translatSegment(base, seg);
+				this.freeReg = base + 1;
 			}
 		}
 	}
 
-	private void translatSegment(PrimaryExpr.Segment seg) {
-		int reg = this.freeReg - 1;
+	private void translatSegment(int base, PrimaryExpr.Segment seg) {
 		if (seg instanceof PrimaryExpr.FieldSegment) {
 			Expr key = ((PrimaryExpr.FieldSegment)seg).getKey();
-			if (key instanceof KExpr) {
-
-			} else {
-
-			}
+			int rk = translatRK(key);
+			index(base, base, rk);
 		} else if (seg instanceof PrimaryExpr.FuncArgsSegment) {
-			int base = reg;
 			Expr[] args = ((PrimaryExpr.FuncArgsSegment)seg).getArgs();
 			if (args != null) {
 				for (Expr e : args) {
@@ -283,6 +289,7 @@ public class Translator {
 	}
 
 	private void translatKExpr(KExpr e) {
+		int i = addK(e.toLuaValue());
 		if (e instanceof Nil) {
 			loadNil();
 		} else if (e instanceof True) {
@@ -290,10 +297,8 @@ public class Translator {
 		} else if (e instanceof False) {
 			loadBoolean(false);
 		} else if (e instanceof LiteralNumber) {
-			int i = addKNumber(((LiteralNumber)e).getText());
 			loadK(i);
 		} else if (e instanceof LiteralString) {
-			int i = addKString(((LiteralString)e).getText());
 			loadK(i);
 		} else {
 			assert(false);
@@ -425,6 +430,10 @@ public class Translator {
 		} while ((t = t.getParent()) != null);
 
 		return info;
+	}
+
+	private void index(int to, int table, int key) {
+		instruction(new Instruction(OpCode.GETTABLE, to, table, key));
 	}
 
 	private void call(int base, int nparam, int nret) {

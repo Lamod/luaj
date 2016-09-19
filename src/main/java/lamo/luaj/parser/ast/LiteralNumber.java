@@ -1,5 +1,8 @@
 package lamo.luaj.parser.ast;
 
+import lamo.luaj.LNumber;
+import lamo.luaj.LValue;
+
 public class LiteralNumber extends KExpr {
 
 	private String text;
@@ -18,6 +21,10 @@ public class LiteralNumber extends KExpr {
 
 	public String toCode() {
 		return text;
+	}
+
+	public LValue toLuaValue() {
+		return new LNumber(Double.parseDouble(this.text));
 	}
 
 }
