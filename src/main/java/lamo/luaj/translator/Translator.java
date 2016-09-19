@@ -21,15 +21,14 @@ public class Translator {
 
 	private CodePiece currentPiece = new CodePiece(null);
 
-	ArrayList<LocVar> localVars = new ArrayList<>();
-	LinkedList<Integer> actVars = new LinkedList<>();
-	ArrayList<UpValue> upvalues = new ArrayList<>();
-	ArrayList<LValue> ks = new ArrayList<>();
-	int freeReg;
+	private ArrayList<LocVar> localVars = new ArrayList<>();
+	private LinkedList<Integer> actVars = new LinkedList<>();
+	private ArrayList<UpValue> upvalues = new ArrayList<>();
+	private ArrayList<LValue> ks = new ArrayList<>();
+	private int freeReg;
 
-	LinkedList<Scope> scopes = new LinkedList<>();
-	ArrayList<Proto> ps = new ArrayList<>();
-
+	private LinkedList<Scope> scopes = new LinkedList<>();
+	private ArrayList<Proto> ps = new ArrayList<>();
 
 	public Translator(Chunk chunk) {
 		this(chunk, null);
@@ -486,49 +485,6 @@ public class Translator {
 
 	private ArrayList<Instruction> getCode() {
 		return this.currentPiece.code;
-	}
-
-	private class Scope {
-
-		private int numOfLocVar;
-
-	}
-
-	private static class VarInfo {
-
-		private static final int LOCAL = 0;
-		private static final int UPVALUE = 1;
-		private static final int GLOBAL = 2;
-
-		private static final VarInfo singleton = new VarInfo();
-
-		private int type;
-		private int index;
-
-	}
-
-	private static class LocVar {
-
-		private String name;
-		private int startPC, endPC;
-
-		private LocVar(String name) {
-			this.name = name;
-		}
-
-		private Proto.LocVar toProtoLocVar() {
-			return new Proto.LocVar(this.name, this.startPC, this.endPC);
-		}
-
-	}
-
-	private static class UpValue {
-
-		private String name;
-		private int index;
-
-		private boolean inSameLevel;
-
 	}
 
 }
