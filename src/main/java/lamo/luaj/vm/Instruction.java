@@ -130,7 +130,8 @@ public class Instruction {
 	private int setSegment(int v, int pos, int size) {
 		assert(v <= (1 << size) - 1);
 
-		return (value & mask0(size, pos)) | ((v << pos) & mask1(size, pos));
+		value = (value & mask0(size, pos)) | ((v << pos) & mask1(size, pos));
+		return value;
 	}
 
 }

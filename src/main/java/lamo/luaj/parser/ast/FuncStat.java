@@ -33,38 +33,40 @@ public class FuncStat extends Stat {
 		return sb.toString();
 	}
 
-	static public class FuncName extends Node {
+	public class FuncName extends Node {
 
-		private String[] segments;
-		private boolean needSelf;
+		private Var var;
+		private String[] fields;
 
-		public String[] getSegments() {
-			return this.segments;
+		public Var getVar() {
+			return var;
 		}
 
-		public void setSegments(String[] segments) {
-			this.segments = segments;
+		public void setVar(Var var) {
+			this.var = var;
 		}
 
-		public boolean getNeedSelf() {
-			return this.needSelf;
+		public String[] getFields() {
+			return this.fields;
 		}
 
-		public void setNeedSelf(boolean needSelf) {
-			this.needSelf = needSelf;
+		public void setFields(String[] fields) {
+			this.fields = fields;
 		}
 
 		public String toCode() {
 			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < this.segments.length; ++i) {
-				if (i > 0) {
-					if (i == this.segments.length - 1 && this.needSelf) {
+			boolean needSelf = getBody().isNeedSelf();
+			sb.append(this.var.getName());
+			if (this.fields != null) {
+				for (int i = 0; i < this.fields.length; ++i) {
+					if (i == this.fields.length - 1 && needSelf) {
 						sb.append(":");
 					} else {
 						sb.append(".");
 					}
+					sb.append(this.fields[i]);
 				}
-				sb.append(this.segments[i]);
 			}
 
 			return sb.toString();

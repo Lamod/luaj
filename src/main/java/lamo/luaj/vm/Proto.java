@@ -9,13 +9,19 @@ public class Proto {
 	private final LocVar[] locVars;
 	private final String[] upValues;
 	private final LValue[] ks;
+	private final boolean isVararg;
 
 	public Proto(Instruction[] code, Proto[] ps, LocVar[] locVars, String[] upValues, LValue[] ks) {
+		this(code, ps, locVars, upValues, ks, false);
+	}
+
+	public Proto(Instruction[] code, Proto[] ps, LocVar[] locVars, String[] upValues, LValue[] ks, boolean isVararg) {
 		this.code = code;
 		this.ps = ps;
 		this.locVars = locVars;
 		this.upValues = upValues;
 		this.ks = ks;
+		this.isVararg = isVararg;
 	}
 
 	public Instruction[] getCode() {
@@ -36,6 +42,10 @@ public class Proto {
 
 	public LValue[] getKs() {
 		return this.ks;
+	}
+
+	public boolean isVararg() {
+		return isVararg;
 	}
 
 	public String toString() {

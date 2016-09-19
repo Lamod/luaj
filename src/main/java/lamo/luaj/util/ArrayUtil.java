@@ -1,5 +1,7 @@
 package lamo.luaj.util;
 
+import java.util.List;
+
 public class ArrayUtil {
 
 	public interface Serializor {
@@ -42,6 +44,20 @@ public class ArrayUtil {
 		}
 
 		return false;
+	}
+
+	static public <T> T get(T[] a, int i) {
+		if (i < 0) {
+			i = a.length + i;
+		}
+		return (i >= 0 && i < a.length) ? a[i] : null;
+	}
+
+	static public <T> T get(List<T> l, int i) {
+		if (i < 0) {
+			i = l.size() + i;
+		}
+		return (i >= 0 && i < l.size()) ? l.get(i) : null;
 	}
 
 }

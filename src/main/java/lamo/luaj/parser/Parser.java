@@ -192,20 +192,25 @@ public class Parser implements Closeable {
 		match(TType.FUNCTION);
 
 		FuncStat stat = new FuncStat();
+		boolean needSelf = false;
+
+		stat.getName().setVar(new Var(match(TType.NAME).getText()));
 
 		ArrayList<String> segments = new ArrayList<>();
-		segments.add(match(TType.NAME).getText());
 
 		while (tryMatch(TType.COMMA) != null) {
 			segments.add(match(TType.NAME).getText());
 		}
-		if (tryMatch(TType.COMMA) != null) {
+		if (tryMatch(TType.COLON) != null) {
 			segments.add(match(TType.NAME).getText());
-			stat.getName().setNeedSelf(true);
+			needSelf = true;
 		}
 
-		stat.getName().setSegments(segments.toArray(new String[segments.size()]));
+		stat.getName().setFields(segments.toArray(new String[segments.size()]));
 		stat.setBody(parseFuncBody());
+		if (needSelf) {
+			stat.getBody().setNeedSelf(true);
+		}
 
 		return stat;
 	}

@@ -6,6 +6,7 @@ public class FuncBody extends Node {
 
 	private Parlist parlist;
 	private Chunk chunk;
+	private boolean needSelf;
 
 	public void setParlist(Parlist parlist) {
 		this.parlist = parlist;
@@ -21,6 +22,14 @@ public class FuncBody extends Node {
 
 	public Chunk getChunk() {
 		return chunk;
+	}
+
+	public boolean isNeedSelf() {
+		return needSelf;
+	}
+
+	public void setNeedSelf(boolean needSelf) {
+		this.needSelf = needSelf;
 	}
 
 	public String toCode() {
