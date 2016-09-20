@@ -14,12 +14,9 @@ import java.util.LinkedList;
 
 public class Translator {
 
-	enum RegAlloc {
-		NEXT,
-		ANY,
-		RK,
-		;
-	}
+	static public final int RA_NEXT = -1;
+	static public final int RA_ANY = -2;
+	static public final int RA_RK = -3;
 
 	private Chunk chunk;
 	private Proto proto;
@@ -70,9 +67,12 @@ public class Translator {
 		}
 
 		openScope();
-		for (Stat stat : this.chunk.getStatements()) {
-			translatStat(stat);
-			this.freeReg = this.actVars.size();
+		Stat[] stats = this.chunk.getStatements();
+		if (!ArrayUtil.isEmpty(stats)) {
+			for (Stat stat : this.chunk.getStatements()) {
+				translatStat(stat);
+				this.freeReg = this.actVars.size();
+			}
 		}
 		ret(0, 0);
 		closeScope();
@@ -110,7 +110,7 @@ public class Translator {
 		} else if (stat instanceof FuncStat) {
 			translatFuncStat((FuncStat)stat);
 		} else if (stat instanceof FuncCallStat) {
-			translatPrimaryExpr(((FuncCallStat)stat).getExpr(), RegAlloc.ANY);
+			translatPrimaryExpr(((FuncCallStat)stat).getExpr(), RA_ANY);
 		} else if (stat instanceof ReturnStat) {
 			translatReturnStat((ReturnStat)stat);
 		}
@@ -128,7 +128,7 @@ public class Translator {
 			Expr e = null;
 			for (int i = 0; i < es.length; ++i) {
 				e = es[i];
-				translatExpr(e, RegAlloc.NEXT);
+				translatExpr(e, RA_NEXT);
 			}
 			if (e.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
@@ -138,26 +138,26 @@ public class Translator {
 			}
 		}
 		if (extra > 0) {
-			loadNil(extra);
-			reserveReg(extra);
+			loadNil(reserveReg(extra), extra);
 		}
 	}
 
 	private void translatFuncStat(FuncStat stat) {
-		int reg = translatFuncBody(stat.getBody());
-		int nup = ArrayUtil.get(this.children, -1).upvalues.size();
-		Instruction inst = ArrayUtil.get(getCode(), -(nup + 1));
 		VarInfo info = singleVar(stat.getName().getVar().getName());
 		switch (info.type) {
 			case VarInfo.LOCAL:
-				inst.setA(info.index);
+				translatFuncBody(stat.getBody(), info.index);
 				break;
-			case VarInfo.UPVALUE:
+			case VarInfo.UPVALUE: {
+				int reg = translatFuncBody(stat.getBody(), RA_ANY);
 				instruction(new Instruction(OpCode.SETUPVALUE, info.index, reg, 0));
 				break;
-			case VarInfo.GLOBAL:
+			}
+			case VarInfo.GLOBAL: {
+				int reg = translatFuncBody(stat.getBody(), RA_ANY);
 				instruction(new Instruction(OpCode.SETGLOBAL, info.index, reg));
 				break;
+			}
 			default:
 				assert(false);
 		}
@@ -171,7 +171,7 @@ public class Translator {
 			Expr e = null;
 			for (int i = 0; i < es.length; ++i) {
 				e = es[i];
-				translatExpr(e, RegAlloc.NEXT);
+				translatExpr(e, RA_NEXT);
 			}
 			if (e.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
@@ -187,7 +187,7 @@ public class Translator {
 		ret(first, nret);
 	}
 
-	private int translatExpr(Expr e, RegAlloc alloc) {
+	private int translatExpr(Expr e, int alloc) {
 		int start = this.freeReg, result = -1;
 		if (e instanceof KExpr) {
 			result = translatKExpr((KExpr)e, alloc);
@@ -195,7 +195,7 @@ public class Translator {
 			result = translatPrimaryExpr((PrimaryExpr)e, alloc);
 		} else if (e instanceof FuncExpr) {
 			FuncBody body = ((FuncExpr) e).getBody();
-			result = translatFuncBody(body);
+			result = translatFuncBody(body, alloc);
 		} else if (e instanceof BinaryExpr) {
 
 		} else if (e instanceof UnaryExpr) {
@@ -210,11 +210,11 @@ public class Translator {
 		return result;
 	}
 
-	private int translatPrimaryExpr(PrimaryExpr expr, RegAlloc alloc) {
+	private int translatPrimaryExpr(PrimaryExpr expr, int alloc) {
 		int start = this.freeReg;
 
+		int prefixAlloc = expr.isVarExpr() ? alloc : RA_ANY;
 		Expr prefixExpr = expr.getPrefixExpr();
-		RegAlloc prefixAlloc = expr.isVarExpr() ? alloc : RegAlloc.ANY;
 		int reg;
 		if (prefixExpr instanceof Var) {
 			reg = translatVar((Var)prefixExpr, prefixAlloc);
@@ -222,26 +222,25 @@ public class Translator {
 			reg = translatExpr(prefixExpr, prefixAlloc);
 		}
 
-		PrimaryExpr.Segment[] segs = expr.getSegments();
-		if (ArrayUtil.isEmpty(segs)) {
+		if (expr.isVarExpr()) {
 			return reg;
 		}
 
 		int base = reg;
-		if ((alloc == RegAlloc.NEXT && base != start) || reg != this.freeReg - 1) {
+		if ((alloc == RA_NEXT && base != start) || reg != this.freeReg - 1) {
 			assert(this.freeReg == start);
 			base = reserveReg(1);
 		}
-		for (PrimaryExpr.Segment seg : segs) {
+		for (PrimaryExpr.Segment seg : expr.getSegments()) {
 			if (seg instanceof PrimaryExpr.FieldSegment) {
 				Expr key = ((PrimaryExpr.FieldSegment)seg).getKey();
-				int rk = translatExpr(key, RegAlloc.RK);
+				int rk = translatExpr(key, RA_RK);
 				index(base, reg, rk);
 			} else if (seg instanceof PrimaryExpr.FuncArgsSegment) {
 				Expr[] args = ((PrimaryExpr.FuncArgsSegment)seg).getArgs();
 				if (args != null) {
 					for (Expr e : args) {
-						translatExpr(e, RegAlloc.NEXT);
+						translatExpr(e, RA_NEXT);
 					}
 				}
 				int np = this.freeReg - base - 1;
@@ -252,17 +251,23 @@ public class Translator {
 			}
 		}
 
-		return base;
+		if (alloc >= 0) {
+			move(alloc, base);
+			return alloc;
+		} else {
+			return base;
+		}
 	}
 
-	private int translatVar(Var var, RegAlloc alloc) {
+	private int translatVar(Var var, int alloc) {
 		VarInfo info = singleVar(var.getName());
-		int reg = reserveReg(1);
+		int reg = alloc >= 0 ? alloc : reserveReg(1);
 		switch (info.type) {
 			case VarInfo.LOCAL:
-				if (alloc == RegAlloc.NEXT) {
+				if (alloc >= RA_NEXT) {
 					move(reg, info.index);
-				} else {
+				}
+				if (alloc != RA_NEXT){
 					reserveReg(-1);
 					reg = info.index;
 				}
@@ -288,7 +293,7 @@ public class Translator {
 		return reg;
 	}
 
-	private int translatFuncBody(FuncBody body) {
+	private int translatFuncBody(FuncBody body, int alloc) {
 		Translator t = new Translator(body.getChunk(), this);
 		if (body.isNeedSelf()) {
 			t.addLocalVar("self");
@@ -300,7 +305,7 @@ public class Translator {
 		}
 
 		Proto p = t.translat();
-		int reg = reserveReg(1);
+		int reg = alloc >= 0 ? alloc : reserveReg(1);
 		this.ps.add(p);
 		instruction(new Instruction(OpCode.CLOSURE, reg, this.ps.size() - 1));
 		UpValue uv;
@@ -316,25 +321,27 @@ public class Translator {
 		return reg;
 	}
 
-	private int translatKExpr(KExpr e, RegAlloc alloc) {
+	private int translatKExpr(KExpr e, int alloc) {
 		int i = addK(e.toLuaValue());
-		if (alloc != RegAlloc.RK) {
-			if (e instanceof Nil) {
-				loadNil();
-			} else if (e instanceof True) {
-				loadBoolean(true);
-			} else if (e instanceof False) {
-				loadBoolean(false);
-			} else if (e instanceof LiteralNumber) {
-				loadK(i);
-			} else if (e instanceof LiteralString) {
-				loadK(i);
-			} else {
-				assert(false);
-			}
-			return this.freeReg - 1;
+		if (alloc == RA_RK) {
+			return Instruction.setAsK(i);
 		}
-		return Instruction.setAsK(i);
+
+		int reg = alloc >= 0 ? alloc : reserveReg(1);
+		if (e instanceof Nil) {
+			loadNil(reg);
+		} else if (e instanceof True) {
+			loadBoolean(true, reg);
+		} else if (e instanceof False) {
+			loadBoolean(false, reg);
+		} else if (e instanceof LiteralNumber) {
+			loadK(i, reg);
+		} else if (e instanceof LiteralString) {
+			loadK(i, reg);
+		} else {
+			assert(false);
+		}
+		return reg;
 	}
 
 	private void openScope() {
@@ -480,12 +487,11 @@ public class Translator {
 		}
 	}
 
-	private void loadNil() {
-		loadNil(1);
+	private void loadNil(int reg) {
+		loadNil(reg, 1);
 	}
 
-	private void loadNil(int n) {
-		int from = reserveReg(n);
+	private void loadNil(int from, int n) {
 		ArrayList<Instruction> code = getCode();
 		if (code.size() > 0) {
 			Instruction prev = ArrayUtil.get(code, -1);
@@ -499,12 +505,12 @@ public class Translator {
 		instruction(new Instruction(OpCode.LOADNIL, from, from + n - 1, 0));
 	}
 
-	private void loadBoolean(boolean v){
-		instruction(new Instruction(OpCode.LOADBOOL, reserveReg(1), v ? 1 : 0, 0));
+	private void loadBoolean(boolean v, int reg){
+		instruction(new Instruction(OpCode.LOADBOOL, reg, v ? 1 : 0, 0));
 	}
 
-	private void loadK(int i) {
-		instruction(new Instruction(OpCode.LOADK, reserveReg(1), i));
+	private void loadK(int i, int reg) {
+		instruction(new Instruction(OpCode.LOADK, reg, i));
 	}
 
 	private void instruction(Instruction inst) {
@@ -524,13 +530,17 @@ public class Translator {
 		return reg;
 	}
 
-	private void checkRegAlloc(RegAlloc alloc, int start, int result) {
-		if (alloc == RegAlloc.NEXT) {
+	private void checkRegAlloc(int alloc, int start, int result) {
+		if (alloc >= 0) {
+			assert(alloc == result && this.freeReg == start);
+		} else if (alloc == RA_NEXT) {
 			assert(isNext(start, result));
-		} else if (alloc == RegAlloc.ANY) {
+		} else if (alloc == RA_ANY) {
 			assert(isAny(start, result));
-		} else if (alloc == RegAlloc.RK) {
+		} else if (alloc == RA_RK) {
 			assert(isK(start, result));
+		} else {
+			assert(false);
 		}
 	}
 
