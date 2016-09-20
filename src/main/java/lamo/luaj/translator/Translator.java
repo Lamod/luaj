@@ -19,8 +19,7 @@ public class Translator {
 	private Translator parent;
 	private ArrayList<Translator> children = new ArrayList<>();
 
-	private CodePiece currentPiece = new CodePiece(null);
-
+	private ArrayList<Instruction> code = new ArrayList<>();
 	private ArrayList<LocVar> localVars = new ArrayList<>();
 	private LinkedList<Integer> actVars = new LinkedList<>();
 	private ArrayList<UpValue> upvalues = new ArrayList<>();
@@ -324,15 +323,6 @@ public class Translator {
 		return this.scopes.getLast();
 	}
 
-	private void openPiece() {
-		this.currentPiece = new CodePiece(this.currentPiece);
-	}
-
-	private void closePiece() {
-		this.currentPiece.pieceUp();
-		this.currentPiece = this.currentPiece.prev;
-	}
-
 	private int addLocalVar(String name) {
 		LocVar var = new LocVar(name);
 		var.startPC = getCode().size();
@@ -493,7 +483,7 @@ public class Translator {
 	}
 
 	private ArrayList<Instruction> getCode() {
-		return this.currentPiece.code;
+		return this.code;
 	}
 
 }
