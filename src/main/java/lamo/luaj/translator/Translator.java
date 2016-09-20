@@ -133,11 +133,13 @@ public class Translator {
 			if (e.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
 				setReturns(last, extra >= 0 ? extra + 1 : 0);
+				reserveReg(extra);
 				extra = 0;
 			}
 		}
 		if (extra > 0) {
 			loadNil(extra);
+			reserveReg(extra);
 		}
 	}
 
@@ -228,7 +230,7 @@ public class Translator {
 		int base = reg;
 		if ((alloc == RegAlloc.NEXT && base != start) || reg != this.freeReg - 1) {
 			assert(this.freeReg == start);
-			base = this.freeReg++;
+			base = reserveReg(1);
 		}
 		for (PrimaryExpr.Segment seg : segs) {
 			if (seg instanceof PrimaryExpr.FieldSegment) {
@@ -244,11 +246,10 @@ public class Translator {
 				}
 				int np = this.freeReg - base - 1;
 				call(reg, np, 1);
+				reserveReg(-np);
 			} else if (seg instanceof PrimaryExpr.FieldAndArgsSegment) {
 
 			}
-
-			this.freeReg = base + 1;
 		}
 
 		return base;
@@ -256,13 +257,13 @@ public class Translator {
 
 	private int translatVar(Var var, RegAlloc alloc) {
 		VarInfo info = singleVar(var.getName());
-		int reg = this.freeReg++;
+		int reg = reserveReg(1);
 		switch (info.type) {
 			case VarInfo.LOCAL:
 				if (alloc == RegAlloc.NEXT) {
 					move(reg, info.index);
 				} else {
-					this.freeReg--;
+					reserveReg(-1);
 					reg = info.index;
 				}
 				break;
@@ -299,7 +300,7 @@ public class Translator {
 		}
 
 		Proto p = t.translat();
-		int reg = this.freeReg++;
+		int reg = reserveReg(1);
 		this.ps.add(p);
 		instruction(new Instruction(OpCode.CLOSURE, reg, this.ps.size() - 1));
 		UpValue uv;
@@ -331,7 +332,7 @@ public class Translator {
 			} else {
 				assert(false);
 			}
-			return this.freeReg++;
+			return this.freeReg - 1;
 		}
 		return Instruction.setAsK(i);
 	}
@@ -484,7 +485,7 @@ public class Translator {
 	}
 
 	private void loadNil(int n) {
-		int from = this.freeReg;
+		int from = reserveReg(n);
 		ArrayList<Instruction> code = getCode();
 		if (code.size() > 0) {
 			Instruction prev = ArrayUtil.get(code, -1);
@@ -499,11 +500,11 @@ public class Translator {
 	}
 
 	private void loadBoolean(boolean v){
-		instruction(new Instruction(OpCode.LOADBOOL, this.freeReg, v ? 1 : 0, 0));
+		instruction(new Instruction(OpCode.LOADBOOL, reserveReg(1), v ? 1 : 0, 0));
 	}
 
 	private void loadK(int i) {
-		instruction(new Instruction(OpCode.LOADK, this.freeReg, i));
+		instruction(new Instruction(OpCode.LOADK, reserveReg(1), i));
 	}
 
 	private void instruction(Instruction inst) {
@@ -515,6 +516,12 @@ public class Translator {
 
 	private ArrayList<Instruction> getCode() {
 		return this.code;
+	}
+
+	private int reserveReg(int n) {
+		int reg = this.freeReg;
+		this.freeReg += n;
+		return reg;
 	}
 
 	private void checkRegAlloc(RegAlloc alloc, int start, int result) {
