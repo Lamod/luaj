@@ -19,7 +19,7 @@ public class TestTranslator {
 			try {
 				Chunk c = p.parse();
 				Translator t = new Translator(c);
-				Proto fun = t.translat();
+				Proto fun = t.translate();
 				System.out.println(fun);
 			} catch (Exception e) {
 				e.printStackTrace();

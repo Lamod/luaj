@@ -61,7 +61,7 @@ public class Translator {
 		return this.children.toArray(new Translator[this.children.size()]);
 	}
 
-	public Proto translat() {
+	public Proto translate() {
 		if (this.proto != null) {
 			return this.proto;
 		}
@@ -70,7 +70,7 @@ public class Translator {
 		Stat[] stats = this.chunk.getStatements();
 		if (!ArrayUtil.isEmpty(stats)) {
 			for (Stat stat : this.chunk.getStatements()) {
-				translatStat(stat);
+				translateStat(stat);
 				this.freeReg = this.actVars.size();
 			}
 		}
@@ -98,25 +98,25 @@ public class Translator {
 		return this.proto.toString();
 	}
 
-	private void translatStat(Stat stat) {
+	private void translateStat(Stat stat) {
 		if (stat instanceof LocalStat) {
-			translatLocalStat((LocalStat)stat);
+			translateLocalStat((LocalStat)stat);
 		} else if (stat instanceof BlockStat) {
 			openScope();
 			for (Stat s : ((BlockStat)stat).getBlock().getStatements()) {
-				translatStat(s);
+				translateStat(s);
 			}
 			closeScope();
 		} else if (stat instanceof FuncStat) {
-			translatFuncStat((FuncStat)stat);
+			translateFuncStat((FuncStat)stat);
 		} else if (stat instanceof FuncCallStat) {
-			translatPrimaryExpr(((FuncCallStat)stat).getExpr(), RA_ANY);
+			translatePrimaryExpr(((FuncCallStat)stat).getExpr(), RA_ANY);
 		} else if (stat instanceof ReturnStat) {
-			translatReturnStat((ReturnStat)stat);
+			translateReturnStat((ReturnStat)stat);
 		}
 	}
 
-	private void translatLocalStat(LocalStat stat) {
+	private void translateLocalStat(LocalStat stat) {
 		String[] names = stat.getNames();
 		for (String n : names) {
 			addLocalVar(n);
@@ -128,7 +128,7 @@ public class Translator {
 			Expr e = null;
 			for (int i = 0; i < es.length; ++i) {
 				e = es[i];
-				translatExpr(e, RA_NEXT);
+				translateExpr(e, RA_NEXT);
 			}
 			if (e.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
@@ -142,19 +142,19 @@ public class Translator {
 		}
 	}
 
-	private void translatFuncStat(FuncStat stat) {
+	private void translateFuncStat(FuncStat stat) {
 		VarInfo info = singleVar(stat.getName().getVar().getName());
 		switch (info.type) {
 			case VarInfo.LOCAL:
-				translatFuncBody(stat.getBody(), info.index);
+				translateFuncBody(stat.getBody(), info.index);
 				break;
 			case VarInfo.UPVALUE: {
-				int reg = translatFuncBody(stat.getBody(), RA_ANY);
+				int reg = translateFuncBody(stat.getBody(), RA_ANY);
 				instruction(new Instruction(OpCode.SETUPVALUE, info.index, reg, 0));
 				break;
 			}
 			case VarInfo.GLOBAL: {
-				int reg = translatFuncBody(stat.getBody(), RA_ANY);
+				int reg = translateFuncBody(stat.getBody(), RA_ANY);
 				instruction(new Instruction(OpCode.SETGLOBAL, info.index, reg));
 				break;
 			}
@@ -163,7 +163,7 @@ public class Translator {
 		}
 	}
 
-	private void translatReturnStat(ReturnStat stat) {
+	private void translateReturnStat(ReturnStat stat) {
 		Expr[] es = stat.getExprs();
 		int first = this.actVars.size(), nret = 0;
 		if (es != null) {
@@ -171,7 +171,7 @@ public class Translator {
 			Expr e = null;
 			for (int i = 0; i < es.length; ++i) {
 				e = es[i];
-				translatExpr(e, RA_NEXT);
+				translateExpr(e, RA_NEXT);
 			}
 			if (e.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
@@ -187,15 +187,15 @@ public class Translator {
 		ret(first, nret);
 	}
 
-	private int translatExpr(Expr e, int alloc) {
+	private int translateExpr(Expr e, int alloc) {
 		int start = this.freeReg, result = -1;
 		if (e instanceof KExpr) {
-			result = translatKExpr((KExpr)e, alloc);
+			result = translateKExpr((KExpr)e, alloc);
 		} else if (e instanceof PrimaryExpr) {
-			result = translatPrimaryExpr((PrimaryExpr)e, alloc);
+			result = translatePrimaryExpr((PrimaryExpr)e, alloc);
 		} else if (e instanceof FuncExpr) {
 			FuncBody body = ((FuncExpr) e).getBody();
-			result = translatFuncBody(body, alloc);
+			result = translateFuncBody(body, alloc);
 		} else if (e instanceof BinaryExpr) {
 
 		} else if (e instanceof UnaryExpr) {
@@ -210,16 +210,16 @@ public class Translator {
 		return result;
 	}
 
-	private int translatPrimaryExpr(PrimaryExpr expr, int alloc) {
+	private int translatePrimaryExpr(PrimaryExpr expr, int alloc) {
 		int start = this.freeReg;
 
 		int prefixAlloc = expr.isVarExpr() ? alloc : RA_ANY;
 		Expr prefixExpr = expr.getPrefixExpr();
 		int reg;
 		if (prefixExpr instanceof Var) {
-			reg = translatVar((Var)prefixExpr, prefixAlloc);
+			reg = translateVar((Var)prefixExpr, prefixAlloc);
 		} else {
-			reg = translatExpr(prefixExpr, prefixAlloc);
+			reg = translateExpr(prefixExpr, prefixAlloc);
 		}
 
 		if (expr.isVarExpr()) {
@@ -234,13 +234,13 @@ public class Translator {
 		for (PrimaryExpr.Segment seg : expr.getSegments()) {
 			if (seg instanceof PrimaryExpr.FieldSegment) {
 				Expr key = ((PrimaryExpr.FieldSegment)seg).getKey();
-				int rk = translatExpr(key, RA_RK);
+				int rk = translateExpr(key, RA_RK);
 				index(base, reg, rk);
 			} else if (seg instanceof PrimaryExpr.FuncArgsSegment) {
 				Expr[] args = ((PrimaryExpr.FuncArgsSegment)seg).getArgs();
 				if (args != null) {
 					for (Expr e : args) {
-						translatExpr(e, RA_NEXT);
+						translateExpr(e, RA_NEXT);
 					}
 				}
 				int np = this.freeReg - base - 1;
@@ -259,7 +259,7 @@ public class Translator {
 		}
 	}
 
-	private int translatVar(Var var, int alloc) {
+	private int translateVar(Var var, int alloc) {
 		VarInfo info = singleVar(var.getName());
 		int reg = alloc >= 0 ? alloc : reserveReg(1);
 		switch (info.type) {
@@ -293,7 +293,7 @@ public class Translator {
 		return reg;
 	}
 
-	private int translatFuncBody(FuncBody body, int alloc) {
+	private int translateFuncBody(FuncBody body, int alloc) {
 		Translator t = new Translator(body.getChunk(), this);
 		if (body.isNeedSelf()) {
 			t.addLocalVar("self");
@@ -304,7 +304,7 @@ public class Translator {
 			}
 		}
 
-		Proto p = t.translat();
+		Proto p = t.translate();
 		int reg = alloc >= 0 ? alloc : reserveReg(1);
 		this.ps.add(p);
 		instruction(new Instruction(OpCode.CLOSURE, reg, this.ps.size() - 1));
@@ -321,7 +321,7 @@ public class Translator {
 		return reg;
 	}
 
-	private int translatKExpr(KExpr e, int alloc) {
+	private int translateKExpr(KExpr e, int alloc) {
 		int i = addK(e.toLuaValue());
 		if (alloc == RA_RK) {
 			return Instruction.setAsK(i);
