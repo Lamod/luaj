@@ -60,4 +60,12 @@ public class ArrayUtil {
 		return (i >= 0 && i < l.size()) ? l.get(i) : null;
 	}
 
+	static public <T> boolean isEmpty(T[] a) {
+		return a == null || a.length == 0;
+	}
+
+	static public <T> boolean isEmpty(List<T> l) {
+		return l == null || l.size() == 0;
+	}
+
 }

@@ -23,10 +23,33 @@ public class PrimaryExpr extends Expr {
 		this.segments = segments;
 	}
 
+	public boolean hasFuncCallSeg() {
+		if (this.segments == null || this.segments.length == 0) {
+			return false;
+		}
+
+		for (Segment seg : this.segments) {
+			if (!(seg instanceof FieldSegment)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public boolean isFuncCallExpr() {
-		return segments != null
-			&& segments.length > 0
-			&& !(segments[segments.length - 1] instanceof FieldSegment);
+		return this.segments != null
+			&& this.segments.length > 0
+			&& !(ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
+	}
+
+	public boolean isVarExpr() {
+		return this.segments == null || this.segments.length == 0;
+	}
+
+	public boolean isIndexExpr() {
+		return this.segments != null
+			&& this.segments.length > 0
+			&& (ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
 	}
 
 	public boolean hasMultRet() {
