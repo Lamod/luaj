@@ -215,19 +215,18 @@ public class Translator {
 
 		int prefixAlloc = expr.isVarExpr() ? alloc : RA_ANY;
 		Expr prefixExpr = expr.getPrefixExpr();
-		int reg;
+		int table;
 		if (prefixExpr instanceof Var) {
-			reg = translateVar((Var)prefixExpr, prefixAlloc);
+			table = translateVar((Var)prefixExpr, prefixAlloc);
 		} else {
-			reg = translateExpr(prefixExpr, prefixAlloc);
+			table = translateExpr(prefixExpr, prefixAlloc);
 		}
-
 		if (expr.isVarExpr()) {
-			return reg;
+			return table;
 		}
 
-		int base = reg;
-		if ((alloc == RA_NEXT && base != start) || reg != this.freeReg - 1) {
+		int base = table;
+		if (base != start) {
 			assert(this.freeReg == start);
 			base = reserveReg(1);
 		}
@@ -235,7 +234,7 @@ public class Translator {
 			if (seg instanceof PrimaryExpr.FieldSegment) {
 				Expr key = ((PrimaryExpr.FieldSegment)seg).getKey();
 				int rk = translateExpr(key, RA_RK);
-				index(base, reg, rk);
+				index(base, table, rk);
 			} else if (seg instanceof PrimaryExpr.FuncArgsSegment) {
 				Expr[] args = ((PrimaryExpr.FuncArgsSegment)seg).getArgs();
 				if (args != null) {
@@ -244,7 +243,7 @@ public class Translator {
 					}
 				}
 				int np = this.freeReg - base - 1;
-				call(reg, np, 1);
+				call(base, np, 1);
 				reserveReg(-np);
 			} else if (seg instanceof PrimaryExpr.FieldAndArgsSegment) {
 
@@ -252,7 +251,15 @@ public class Translator {
 		}
 
 		if (alloc >= 0) {
-			move(alloc, base);
+			assert(alloc < start);
+			if (expr.isIndexExpr()) {
+				Instruction last = ArrayUtil.get(this.getCode(), -1);
+				assert(last.getOpCode() == OpCode.GETTABLE);
+				last.setA(alloc);
+			} else {
+				move(alloc, base);
+			}
+			reserveReg(-1);
 			return alloc;
 		} else {
 			return base;
