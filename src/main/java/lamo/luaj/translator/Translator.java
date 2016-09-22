@@ -112,7 +112,12 @@ public class Translator {
 		} else if (stat instanceof FuncStat) {
 			translateFuncStat((FuncStat)stat);
 		} else if (stat instanceof FuncCallStat) {
-			translatePrimaryExpr(((FuncCallStat)stat).getExpr(), RA_ANY);
+			PrimaryExpr pe = ((FuncCallStat)stat).getExpr();
+			translatePrimaryExpr(pe, RA_ANY);
+			if (pe.isFuncCallExpr()) {
+				Instruction last = ArrayUtil.get(getCode(), -1);
+				setReturns(last, 0);
+			}
 		} else if (stat instanceof ReturnStat) {
 			translateReturnStat((ReturnStat)stat);
 		}
@@ -236,10 +241,12 @@ public class Translator {
 			return table;
 		}
 
-		int base = table;
-		if (base != start) {
+		int base;
+		if (table != start) {
 			assert(this.freeReg == start);
 			base = reserveReg(1);
+		} else {
+			base = table;
 		}
 		for (PrimaryExpr.Segment seg : expr.getSegments()) {
 			if (seg instanceof PrimaryExpr.FieldSegment) {
@@ -248,17 +255,15 @@ public class Translator {
 				index(base, table, rk);
 			} else if (seg instanceof PrimaryExpr.FuncArgsSegment) {
 				Expr[] args = ((PrimaryExpr.FuncArgsSegment)seg).getArgs();
-				if (args != null) {
-					for (Expr e : args) {
-						translateExpr(e, RA_NEXT);
-					}
-				}
-				int np = this.freeReg - base - 1;
-				call(base, np, 1);
-				reserveReg(-np);
+				translateArgs(args, base);
 			} else if (seg instanceof PrimaryExpr.FieldAndArgsSegment) {
-
+				PrimaryExpr.FieldAndArgsSegment fs = (PrimaryExpr.FieldAndArgsSegment)seg;
+				int rk = translateExpr(new LiteralString(fs.getKey()), RA_RK);
+				instruction(new Instruction(OpCode.SELF, base, table, rk));
+				reserveReg(1);
+				translateArgs(fs.getArgs(), base);
 			}
+			table = base;
 		}
 
 		if (alloc >= 0) {
@@ -275,6 +280,17 @@ public class Translator {
 		} else {
 			return base;
 		}
+	}
+
+	private void translateArgs(Expr[] args, int func) {
+		if (args != null) {
+			for (Expr e : args) {
+				translateExpr(e, RA_NEXT);
+			}
+		}
+		int np = this.freeReg - func - 1;
+		call(func, np, 1);
+		reserveReg(-np);
 	}
 
 	private int translateVar(Var var, int alloc) {
