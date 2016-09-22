@@ -283,7 +283,7 @@ public class Parser implements Closeable {
 				parlist.setParams(parseNames());
 			}
 			if (tryMatch(TType.DOTS) != null) {
-				parlist.setIsVarargs(true);
+				parlist.setVararg(true);
 			}
 
 			return parlist;

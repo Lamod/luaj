@@ -47,7 +47,7 @@ public class FuncBody extends Node {
 
 	public static class Parlist extends Node {
 		private String[] params;
-		private boolean isVarargs;
+		private boolean vararg;
 
 		public void setParams(String[] params) {
 			this.params = params;
@@ -57,12 +57,12 @@ public class FuncBody extends Node {
 			return params;
 		}
 
-		public void setIsVarargs(boolean isVarargs) {
-			this.isVarargs = isVarargs;
+		public boolean isVararg() {
+			return this.vararg;
 		}
 
-		public boolean getIsVarargs() {
-			return isVarargs;
+		public void setVararg(boolean vararg) {
+			this.vararg = vararg;
 		}
 
 		public String toCode() {
@@ -70,7 +70,7 @@ public class FuncBody extends Node {
 			if (this.params != null) {
 				sb.append(ArrayUtil.join(this.params, CODE_SERIALIZOR, ", "));
 			}
-			if (this.isVarargs) {
+			if (this.vararg) {
 				if (this.params != null) {
 					sb.append(", ");
 				}
@@ -79,7 +79,7 @@ public class FuncBody extends Node {
 
 			return sb.toString();
 		}
-				
+
 	}
 
 }

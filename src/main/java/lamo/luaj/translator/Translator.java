@@ -19,6 +19,8 @@ public class Translator {
 	static public final int RA_RK = -3;
 
 	private Chunk chunk;
+	private int numParams;
+	private boolean vararg;
 	private Proto proto;
 	private Translator parent;
 	private ArrayList<Translator> children = new ArrayList<>();
@@ -90,7 +92,7 @@ public class Translator {
 		}
 		LValue[] ks = this.ks.toArray(new LValue[this.ks.size()]);
 
-		this.proto = new Proto(is, ps, ls, null, ks);
+		this.proto = new Proto(is, ps, ls, null, ks, this.numParams, this.vararg);
 		return this.proto;
 	}
 
@@ -175,11 +177,9 @@ public class Translator {
 			}
 			if (e.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
-				if (last.getOpCode() == OpCode.CALL) {
-					setReturns(last, -1);
-					if (es.length == 1) {
-						last.setOpCode(OpCode.TAILCALL);
-					}
+				setReturns(last, -1);
+				if (last.getOpCode() == OpCode.CALL && es.length == 1) {
+					last.setOpCode(OpCode.TAILCALL);
 				}
 				nret = -1;
 			}
@@ -196,14 +196,18 @@ public class Translator {
 		} else if (e instanceof FuncExpr) {
 			FuncBody body = ((FuncExpr) e).getBody();
 			result = translateFuncBody(body, alloc);
+		} else if (e instanceof VarargExpr) {
+			assert(alloc == RA_NEXT);
+			result = reserveReg(1);
+			instruction(new Instruction(OpCode.VARARG, result, 2, 0));
 		} else if (e instanceof BinaryExpr) {
 
 		} else if (e instanceof UnaryExpr) {
 
 		} else if (e instanceof TableConstructorExpr) {
 
-		} else if (e instanceof VarargExpr) {
-
+		} else {
+			assert(false);
 		}
 
 		checkRegAlloc(alloc, start, result);
@@ -307,11 +311,14 @@ public class Translator {
 
 	private int translateFuncBody(FuncBody body, int alloc) {
 		Translator t = new Translator(body.getChunk(), this);
+		t.vararg = body.getParlist().isVararg();
 		if (body.isNeedSelf()) {
+			t.numParams++;
 			t.addLocalVar("self");
 		}
 		if (body.getParlist() != null && body.getParlist().getParams() != null) {
 			for (String p : body.getParlist().getParams()) {
+				t.numParams++;
 				t.addLocalVar(p);
 			}
 		}
@@ -490,6 +497,11 @@ public class Translator {
 		if (inst.getOpCode() == OpCode.CALL) {
 			assert(nret >= -1);
 			inst.setC(nret + 1);
+		} else if (inst.getOpCode() == OpCode.VARARG) {
+			inst.setB(nret + 1);
+		}
+		if (nret >= 0) {
+			reserveReg(nret - 1);
 		}
 	}
 
