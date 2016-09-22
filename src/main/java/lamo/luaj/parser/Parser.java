@@ -253,9 +253,8 @@ public class Parser implements Closeable {
 		}
 		stat.setVariables(varList.toArray(new PrimaryExpr[varList.size()]));
 
-		if (tryMatch(TType.ASSIGN) != null) {
-			stat.setValues(parseExprs());
-		}
+		match(TType.ASSIGN);
+		stat.setValues(parseExprs());
 
 		return stat;
 	}
