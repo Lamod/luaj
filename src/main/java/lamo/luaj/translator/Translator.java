@@ -225,7 +225,7 @@ public class Translator {
 		int prefixAlloc;
 		if (expr.isVarExpr()) {
 			prefixAlloc = alloc;
-		} else if (expr.getSegments()[0] instanceof PrimaryExpr.FuncArgsSegment) {
+		} else if (expr.getSegments()[0] instanceof PrimaryExpr.ArgsSegment) {
 			prefixAlloc = RA_NEXT;
 		} else {
 			prefixAlloc = RA_ANY;
@@ -253,12 +253,12 @@ public class Translator {
 				Expr key = ((PrimaryExpr.FieldSegment)seg).getKey();
 				int rk = translateExpr(key, RA_RK);
 				index(base, table, rk);
-			} else if (seg instanceof PrimaryExpr.FuncArgsSegment) {
-				Expr[] args = ((PrimaryExpr.FuncArgsSegment)seg).getArgs();
+			} else if (seg instanceof PrimaryExpr.ArgsSegment) {
+				Expr[] args = ((PrimaryExpr.ArgsSegment)seg).getArgs();
 				translateArgs(args, base);
-			} else if (seg instanceof PrimaryExpr.FieldAndArgsSegment) {
-				PrimaryExpr.FieldAndArgsSegment fs = (PrimaryExpr.FieldAndArgsSegment)seg;
-				int rk = translateExpr(new LiteralString(fs.getKey()), RA_RK);
+			} else if (seg instanceof PrimaryExpr.MethodSegment) {
+				PrimaryExpr.MethodSegment fs = (PrimaryExpr.MethodSegment)seg;
+				int rk = translateExpr(new LiteralString(fs.getName()), RA_RK);
 				instruction(new Instruction(OpCode.SELF, base, table, rk));
 				reserveReg(1);
 				translateArgs(fs.getArgs(), base);

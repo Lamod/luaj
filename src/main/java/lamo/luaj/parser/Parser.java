@@ -405,15 +405,15 @@ public class Parser implements Closeable {
 				}
 				case COLON: {
 					consume();
-					PrimaryExpr.FieldAndArgsSegment seg = new PrimaryExpr.FieldAndArgsSegment();
-					seg.setKey(match(TType.NAME).getText());
+					PrimaryExpr.MethodSegment seg = new PrimaryExpr.MethodSegment();
+					seg.setName(match(TType.NAME).getText());
 					seg.setArgs(parseFuncArgs());
 					segmentList.add(seg);
 
 					break;
 				}
 				case LPARENT: case LBRACE: case STRING: {
-					PrimaryExpr.FuncArgsSegment seg = new PrimaryExpr.FuncArgsSegment();
+					PrimaryExpr.ArgsSegment seg = new PrimaryExpr.ArgsSegment();
 					seg.setArgs(parseFuncArgs());
 					segmentList.add(seg);
 

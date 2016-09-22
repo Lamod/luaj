@@ -89,7 +89,7 @@ public class PrimaryExpr extends Expr {
 
 	}
 
-	static public class FuncArgsSegment extends Segment {
+	static public class ArgsSegment extends Segment {
 
 		private Expr[] args;
 
@@ -112,17 +112,17 @@ public class PrimaryExpr extends Expr {
 
 	}
 
-	static public class FieldAndArgsSegment extends Segment {
+	static public class MethodSegment extends Segment {
 
-		private String key;
+		private String name;
 		private Expr[] args;
 
-		public String getKey() {
-			return this.key;
+		public String getName() {
+			return this.name;
 		}
 
-		public void setKey(String key) {
-			this.key = key;
+		public void setName(String name) {
+			this.name = name;
 		}
 
 		public Expr[] getArgs() {
@@ -136,7 +136,7 @@ public class PrimaryExpr extends Expr {
 		public String toCode() {
 			StringBuilder sb = new StringBuilder();
 			sb.append(":");
-			sb.append(this.key);
+			sb.append(this.name);
 			sb.append("(");
 			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZOR, ", "));
 			sb.append(")");
