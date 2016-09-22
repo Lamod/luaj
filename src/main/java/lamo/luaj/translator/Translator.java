@@ -213,7 +213,14 @@ public class Translator {
 	private int translatePrimaryExpr(PrimaryExpr expr, int alloc) {
 		int start = this.freeReg;
 
-		int prefixAlloc = expr.isVarExpr() ? alloc : RA_ANY;
+		int prefixAlloc;
+		if (expr.isVarExpr()) {
+			prefixAlloc = alloc;
+		} else if (expr.getSegments()[0] instanceof PrimaryExpr.FuncArgsSegment) {
+			prefixAlloc = RA_NEXT;
+		} else {
+			prefixAlloc = RA_ANY;
+		}
 		Expr prefixExpr = expr.getPrefixExpr();
 		int table;
 		if (prefixExpr instanceof Var) {
