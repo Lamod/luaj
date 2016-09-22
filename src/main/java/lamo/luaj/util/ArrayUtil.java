@@ -47,9 +47,6 @@ public class ArrayUtil {
 	}
 
 	static public <T> T get(T[] a, int i) {
-		if (isEmpty(a)) {
-			return null;
-		}
 		if (i < 0) {
 			i = a.length + i;
 		}
@@ -57,9 +54,6 @@ public class ArrayUtil {
 	}
 
 	static public <T> T get(List<T> l, int i) {
-		if (isEmpty(l)) {
-			return null;
-		}
 		if (i < 0) {
 			i = l.size() + i;
 		}

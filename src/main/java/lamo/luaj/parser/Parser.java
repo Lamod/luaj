@@ -384,14 +384,10 @@ public class Parser implements Closeable {
 		}
 
 		ArrayList<PrimaryExpr.Segment> segmentList = new ArrayList<>();
-		boolean needSelf = false;
 		loop:
 		while (true) {
 			switch (current.getType()) {
 				case DOT: {
-					if (needSelf) {
-						throw new ParserException();
-					}
                     consume();
 					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
 					seg.setKey(new LiteralString(consume().getText()));
@@ -400,9 +396,6 @@ public class Parser implements Closeable {
 					break;
 				}
 				case LBRACKET: {
-					if (needSelf) {
-						throw new ParserException();
-					}
 					consume();
 					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
 					seg.setKey(parseExpr());
@@ -412,24 +405,17 @@ public class Parser implements Closeable {
 					break;
 				}
 				case COLON: {
-					if (needSelf) {
-						throw new ParserException();
-					}
 					consume();
-					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
-					seg.setKey(new LiteralString(consume().getText()));
+					PrimaryExpr.FieldAndArgsSegment seg = new PrimaryExpr.FieldAndArgsSegment();
+					seg.setKey(match(TType.NAME).getText());
+					seg.setArgs(parseFuncArgs());
 					segmentList.add(seg);
-					needSelf = true;
 
 					break;
 				}
 				case LPARENT: case LBRACE: case STRING: {
 					PrimaryExpr.FuncArgsSegment seg = new PrimaryExpr.FuncArgsSegment();
 					seg.setArgs(parseFuncArgs());
-					if (needSelf) {
-						seg.setNeedSelf(true);
-						needSelf = false;
-					}
 					segmentList.add(seg);
 
 					break;

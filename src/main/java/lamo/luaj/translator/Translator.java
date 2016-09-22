@@ -256,6 +256,8 @@ public class Translator {
 				int np = this.freeReg - base - 1;
 				call(base, np, 1);
 				reserveReg(-np);
+			} else if (seg instanceof PrimaryExpr.FieldAndArgsSegment) {
+
 			}
 		}
 

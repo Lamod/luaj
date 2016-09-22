@@ -29,7 +29,7 @@ public class PrimaryExpr extends Expr {
 		}
 
 		for (Segment seg : this.segments) {
-			if (seg instanceof FuncArgsSegment) {
+			if (!(seg instanceof FieldSegment)) {
 				return true;
 			}
 		}
@@ -37,15 +37,19 @@ public class PrimaryExpr extends Expr {
 	}
 
 	public boolean isFuncCallExpr() {
-		return (ArrayUtil.get(this.segments, -1) instanceof FuncArgsSegment);
+		return this.segments != null
+			&& this.segments.length > 0
+			&& !(ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
 	}
 
 	public boolean isVarExpr() {
-		return ArrayUtil.isEmpty(this.segments);
+		return this.segments == null || this.segments.length == 0;
 	}
 
 	public boolean isIndexExpr() {
-		return (ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
+		return this.segments != null
+			&& this.segments.length > 0
+			&& (ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
 	}
 
 	public boolean hasMultRet() {
@@ -56,26 +60,8 @@ public class PrimaryExpr extends Expr {
 		StringBuilder sb = new StringBuilder();
 		sb.append(this.prefixExpr.toCode());
 		if (this.segments != null) {
-			Segment seg;
-			for (int i = 0; i < this.segments.length; ++i) {
-				seg = this.segments[i];
-				if (seg instanceof FuncArgsSegment) {
-					sb.append(seg.toCode());
-				} else {
-					Expr key = ((FieldSegment)seg).getKey();
-					if (key instanceof LiteralString) {
-						Segment next = ArrayUtil.get(this.segments, i + 1);
-						if (next != null && next instanceof FuncArgsSegment
-								&& ((FuncArgsSegment) next).isNeedSelf()) {
-							sb.append(":");
-						} else {
-							sb.append(".");
-						}
-						sb.append(((LiteralString) key).getText());
-					} else {
-						sb.append(seg.toCode());
-					}
-				}
+			for (Segment seg : this.segments) {
+				sb.append(seg.toCode());
 			}
 		}
 
@@ -106,7 +92,6 @@ public class PrimaryExpr extends Expr {
 	static public class FuncArgsSegment extends Segment {
 
 		private Expr[] args;
-		private boolean needSelf;
 
 		public Expr[] getArgs() {
 			return this.args;
@@ -116,16 +101,42 @@ public class PrimaryExpr extends Expr {
 			this.args = args;
 		}
 
-		public boolean isNeedSelf() {
-			return this.needSelf;
+		public String toCode() {
+			StringBuilder sb = new StringBuilder();
+			sb.append("(");
+			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZOR, ", "));
+			sb.append(")");
+
+			return sb.toString();
 		}
 
-		public void setNeedSelf(boolean needSelf) {
-			this.needSelf = needSelf;
+	}
+
+	static public class FieldAndArgsSegment extends Segment {
+
+		private String key;
+		private Expr[] args;
+
+		public String getKey() {
+			return this.key;
+		}
+
+		public void setKey(String key) {
+			this.key = key;
+		}
+
+		public Expr[] getArgs() {
+			return this.args;
+		}
+
+		public void setArgs(Expr[] args) {
+			this.args = args;
 		}
 
 		public String toCode() {
 			StringBuilder sb = new StringBuilder();
+			sb.append(":");
+			sb.append(this.key);
 			sb.append("(");
 			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZOR, ", "));
 			sb.append(")");
