@@ -12,16 +12,18 @@ public class LNumber extends LValue {
 		this.value = value;
 	}
 
-	public boolean equals(LValue v) {
-		if (v instanceof LNumber) {
-			return equals((LNumber)v);
-		} else {
+	@Override
+	public boolean equals(Object o) {
+		if (o == this) {
+			return true;
+		}
+		if (o == null) {
 			return false;
 		}
-	}
-
-	public boolean equals(LNumber n) {
-		return n.value == this.value;
+		if (o.getClass() != this.getClass()) {
+			return false;
+		}
+		return ((LNumber)o).value == this.value;
 	}
 
 	@Override

@@ -9,16 +9,9 @@ public class LBoolean extends LValue {
 		assert(false);
 	}
 
-	public boolean equals(LValue v) {
-		if (v instanceof LBoolean) {
-			return equals((LBoolean)v);
-		} else {
-			return false;
-		}
-	}
-
-	public boolean equals(LBoolean b) {
-		return b == this;
+	@Override
+	public boolean equals(Object o) {
+		return o == this;
 	}
 
 	@Override

@@ -10,15 +10,19 @@ public class LString extends LValue {
 		this.string = str;
 	}
 
-	public boolean equals(LValue v) {
-		if (v instanceof LString) {
-			return equals((LString)v);
-		} else {
+	@Override
+	public boolean equals(Object o) {
+		if (o == this) {
+			return true;
+		}
+		if (o == null) {
 			return false;
 		}
-	}
+		if (o.getClass() != this.getClass()) {
+			return false;
+		}
 
-	public boolean equals(LString s) {
+		LString s = (LString)o;
 		if (s.string == this.string) {
 			return true;
 		}
