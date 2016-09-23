@@ -1,11 +1,16 @@
 package lamo.luaj.util;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ArrayUtil {
 
 	public interface Serializor {
 		String serialize(Object o);
+	}
+
+	public interface Mapper<T, U> {
+		T map(U u);
 	}
 
 	static public String join(Object[] a, String sep) {
@@ -66,6 +71,19 @@ public class ArrayUtil {
 
 	static public <T> boolean isEmpty(List<T> l) {
 		return l == null || l.size() == 0;
+	}
+
+	static public <T, U> T[] map(U[] us, Mapper<T, U> mapper, T[] ts) {
+		if (isEmpty(us) || mapper == null) {
+			return null;
+		}
+		if (isEmpty(ts)) {
+			return ts;
+		}
+		for (int i = 0; i < Math.min(us.length, ts.length); ++i) {
+			ts[i] = mapper.map(us[i]);
+		}
+		return ts;
 	}
 
 }

@@ -134,24 +134,27 @@ public class Translator {
 	}
 
 	private void translateFuncStat(FuncStat stat) {
-		VarInfo info = singleVar(stat.getName().getVar().getName());
-		switch (info.type) {
-			case VarInfo.LOCAL:
-				translateFuncBody(stat.getBody(), info.index);
-				break;
-			case VarInfo.UPVALUE: {
-				int reg = translateFuncBody(stat.getBody(), RA_ANY);
-				instruction(new Instruction(OpCode.SETUPVALUE, info.index, reg, 0));
-				break;
+		PrimaryExpr pe = new PrimaryExpr();
+
+		Var var = stat.getName().getVar();
+		pe.setPrefixExpr(var);
+
+		String[] fields = stat.getName().getFields();
+		ArrayUtil.Mapper<PrimaryExpr.Segment, String> mapper =
+		new ArrayUtil.Mapper<PrimaryExpr.Segment, String>() {
+			@Override
+			public PrimaryExpr.Segment map(String s) {
+				PrimaryExpr.FieldSegment fs = new PrimaryExpr.FieldSegment();
+				fs.setKey(new LiteralString(s));
+				return fs;
 			}
-			case VarInfo.GLOBAL: {
-				int reg = translateFuncBody(stat.getBody(), RA_ANY);
-				instruction(new Instruction(OpCode.SETGLOBAL, info.index, reg));
-				break;
-			}
-			default:
-				assert false;
-		}
+		};
+		PrimaryExpr.Segment[] segs = ArrayUtil.map(fields, mapper, new PrimaryExpr.Segment[fields.length]);
+		pe.setSegments(segs);
+
+		AssignVarInfo info = translateAssignVar(pe);
+		int reg = translateFuncBody(stat.getBody(), RA_NEXT);
+		storeVar(info, reg);
 	}
 
 	private void translateReturnStat(ReturnStat stat) {

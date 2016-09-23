@@ -198,7 +198,7 @@ public class Parser implements Closeable {
 
 		ArrayList<String> segments = new ArrayList<>();
 
-		while (tryMatch(TType.COMMA) != null) {
+		while (tryMatch(TType.DOT) != null) {
 			segments.add(match(TType.NAME).getText());
 		}
 		if (tryMatch(TType.COLON) != null) {
