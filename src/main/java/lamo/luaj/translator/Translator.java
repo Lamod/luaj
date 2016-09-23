@@ -200,7 +200,7 @@ public class Translator {
 			FuncBody body = ((FuncExpr) e).getBody();
 			result = translateFuncBody(body, alloc);
 		} else if (e instanceof VarargExpr) {
-			assert(alloc == RA_NEXT);
+			assert alloc == RA_NEXT;
 			result = reserveReg(1);
 			instruction(new Instruction(OpCode.VARARG, result, 2, 0));
 		} else if (e instanceof BinaryExpr) {
@@ -208,13 +208,75 @@ public class Translator {
 		} else if (e instanceof UnaryExpr) {
 
 		} else if (e instanceof TableConstructorExpr) {
-
+			result = translateTableConstructor((TableConstructorExpr)e, alloc);
 		} else {
 			assert false;
 		}
 
 		checkRegAlloc(alloc, start, result);
 		return result;
+	}
+
+	private int translateTableConstructor(TableConstructorExpr expr, int alloc) {
+		int table = reserveReg(1);
+		Instruction inst = new Instruction(OpCode.NEWTABLE, table, 0, 0);
+		instruction(inst);
+
+		TableConstructorExpr.Field[] fs = expr.getFields();
+		if (!ArrayUtil.isEmpty(fs)) {
+			int na = 0, toStore = 0, nh = 0;
+			TableConstructorExpr.Field f;
+			for (int i = 0; i < fs.length; ++i) {
+				f = fs[i];
+				if (f instanceof TableConstructorExpr.ListField) {
+					na++;
+					toStore++;
+					translateExpr(f.getValue(), RA_NEXT);
+				} else {
+					nh++;
+					TableConstructorExpr.RecField rf = (TableConstructorExpr.RecField)f;
+					int reg = this.freeReg;
+					int k = translateExpr(rf.getKey(), RA_RK);
+					int v = translateExpr(rf.getValue(), RA_RK);
+					instruction(new Instruction(OpCode.SETTABLE, table, k, v));
+					if (reg != this.freeReg) {
+						reserveReg(reg - this.freeReg);
+					}
+				}
+				if (toStore > 0 && (toStore == Config.LFIELDS_PER_FLUSH || i == fs.length - 1)) {
+					int b;
+					if (i == fs.length - 1
+							&& f instanceof TableConstructorExpr.ListField
+							&& f.getValue().hasMultRet()) {
+						Instruction last = ArrayUtil.get(getCode(), -1);
+						setReturns(last, -1);
+						na--;
+						b = 0;
+					} else {
+						b = toStore;
+					}
+					int c = (na - 1) / Config.LFIELDS_PER_FLUSH + 1;
+					if (c <= Instruction.MAX_C) {
+						instruction(new Instruction(OpCode.SETLIST, table, b, c));
+					} else {
+						instruction(new Instruction(OpCode.SETLIST, table, b, 0));
+						instruction(new Instruction(c));
+					}
+					reserveReg(-toStore);
+					toStore = 0;
+				}
+			}
+			inst.setB(na);
+			inst.setC(nh);
+		}
+
+		if (alloc >= 0) {
+			move(alloc, table);
+			reserveReg(-1);
+			return alloc;
+		} else {
+			return table;
+		}
 	}
 
 	private int translatePrimaryExpr(PrimaryExpr expr, int alloc) {
@@ -241,7 +303,7 @@ public class Translator {
 
 		int base;
 		if (table != start) {
-			assert(this.freeReg == start);
+			assert this.freeReg == start;
 			base = reserveReg(1);
 		} else {
 			base = table;
@@ -265,7 +327,7 @@ public class Translator {
 		}
 
 		if (alloc >= 0) {
-			assert(alloc < start);
+			assert alloc < start;
 			if (expr.isIndexExpr()) {
 				Instruction last = ArrayUtil.get(this.getCode(), -1);
 				assert last.getOpCode() == OpCode.GETTABLE;
@@ -512,7 +574,7 @@ public class Translator {
 
 	private void setReturns(Instruction inst, int nret) {
 		if (inst.getOpCode() == OpCode.CALL) {
-			assert(nret >= -1);
+			assert nret >= -1;
 			inst.setC(nret + 1);
 		} else if (inst.getOpCode() == OpCode.VARARG) {
 			inst.setB(nret + 1);
@@ -579,7 +641,7 @@ public class Translator {
 		} else if (alloc == RA_ANY) {
 			assert isAny(start, result);
 		} else if (alloc == RA_RK) {
-			assert isK(start, result);
+			assert isRK(start, result);
 		} else {
 			assert false;
 		}
@@ -593,7 +655,7 @@ public class Translator {
 		return (result < start && this.freeReg == start) || isNext(start, result);
 	}
 
-	private boolean isK(int start, int result) {
+	private boolean isRK(int start, int result) {
 		return Instruction.isK(result) || isAny(start, result);
 	}
 

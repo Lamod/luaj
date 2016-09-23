@@ -51,12 +51,12 @@ public class Instruction {
 	}
 
 	public Instruction(OpCode code, int a, int b, int c) {
-		assert(code.getOpMode() == OpCode.OpMode.iABC);
+		assert code.getOpMode() == OpCode.OpMode.iABC;
 		this.value = code.getIndex() | a << POS_A | b << POS_B | c << POS_C;
 	}
 
 	public Instruction(OpCode code, int a, int bx) {
-		assert(code.getOpMode() != OpCode.OpMode.iABC);
+		assert code.getOpMode() != OpCode.OpMode.iABC;
 		this.value = code.getIndex() | a << POS_A | bx << POS_Bx;
 	}
 

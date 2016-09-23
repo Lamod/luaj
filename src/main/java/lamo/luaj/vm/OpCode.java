@@ -59,7 +59,7 @@ public enum OpCode {
 	private ArgMode bMode, cMode;
 	private boolean aMode, tMode;
 
-	private OpCode(OpMode op, boolean t, boolean a, ArgMode b, ArgMode c) {
+	OpCode(OpMode op, boolean t, boolean a, ArgMode b, ArgMode c) {
 		this.opMode = op;
 		this.bMode = b;
 		this.cMode = c;
