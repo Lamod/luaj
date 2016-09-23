@@ -5,9 +5,7 @@ public class LBoolean extends LValue {
 	public static LBoolean TRUE = new LBoolean();
 	public static LBoolean FALSE = new LBoolean();
 
-	public LBoolean() {
-		assert(false);
-	}
+	private LBoolean() { }
 
 	@Override
 	public boolean equals(Object o) {

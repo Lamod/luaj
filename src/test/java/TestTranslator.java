@@ -11,6 +11,9 @@ public class TestTranslator {
 
 	public static void main(String[] args) throws FileNotFoundException, ParserException {
 		for (String file: args) {
+			if (file.startsWith("-")) {
+				continue;
+			}
 			FileReader reader = new FileReader(file);
 			System.out.println("=== " + file + "(" + reader.getEncoding() + ") ===");
 

@@ -1,8 +1,6 @@
 package lamo.luaj.translator;
 
-import lamo.luaj.LNumber;
-import lamo.luaj.LString;
-import lamo.luaj.LValue;
+import lamo.luaj.*;
 import lamo.luaj.parser.ast.*;
 import lamo.luaj.util.ArrayUtil;
 import lamo.luaj.vm.Instruction;
@@ -166,7 +164,7 @@ public class Translator {
 				break;
 			}
 			default:
-				assert(false);
+				assert false;
 		}
 	}
 
@@ -212,7 +210,7 @@ public class Translator {
 		} else if (e instanceof TableConstructorExpr) {
 
 		} else {
-			assert(false);
+			assert false;
 		}
 
 		checkRegAlloc(alloc, start, result);
@@ -270,7 +268,7 @@ public class Translator {
 			assert(alloc < start);
 			if (expr.isIndexExpr()) {
 				Instruction last = ArrayUtil.get(this.getCode(), -1);
-				assert(last.getOpCode() == OpCode.GETTABLE);
+				assert last.getOpCode() == OpCode.GETTABLE;
 				last.setA(alloc);
 			} else {
 				move(alloc, base);
@@ -321,7 +319,7 @@ public class Translator {
 				break;
 			}
 			default:
-				assert(false);
+				assert false;
 		}
 
 		return reg;
@@ -376,7 +374,7 @@ public class Translator {
 		} else if (e instanceof LiteralString) {
 			loadK(i, reg);
 		} else {
-			assert(false);
+			assert false;
 		}
 		return reg;
 	}
@@ -449,7 +447,8 @@ public class Translator {
 	}
 
 	private int addK(LValue v) {
-		assert(v instanceof LNumber || v instanceof LString);
+		assert (v instanceof LNumber || v instanceof LString
+			|| v instanceof LBoolean || v instanceof LNil);
 		int i = findK(v);
 		if (i >= 0) {
 			return i;
@@ -574,15 +573,15 @@ public class Translator {
 
 	private void checkRegAlloc(int alloc, int start, int result) {
 		if (alloc >= 0) {
-			assert(alloc == result && this.freeReg == start);
+			assert (alloc == result && this.freeReg == start);
 		} else if (alloc == RA_NEXT) {
-			assert(isNext(start, result));
+			assert isNext(start, result);
 		} else if (alloc == RA_ANY) {
-			assert(isAny(start, result));
+			assert isAny(start, result);
 		} else if (alloc == RA_RK) {
-			assert(isK(start, result));
+			assert isK(start, result);
 		} else {
-			assert(false);
+			assert false;
 		}
 	}
 
