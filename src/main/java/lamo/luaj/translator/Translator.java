@@ -472,9 +472,9 @@ public class Translator {
 		for (int i = 0; i < t.upvalues.size(); ++i) {
 			uv = t.upvalues.get(i);
 			if (uv.inSameLevel) {
-				instruction(new Instruction(OpCode.MOVE, i, uv.index, 0));
+				instruction(new Instruction(OpCode.MOVE, 0, uv.index, 0));
 			} else {
-				instruction(new Instruction(OpCode.GETUPVALUE, i, uv.index, 0));
+				instruction(new Instruction(OpCode.GETUPVALUE, 0, uv.index, 0));
 			}
 		}
 
