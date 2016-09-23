@@ -24,7 +24,7 @@ public class PrimaryExpr extends Expr {
 	}
 
 	public boolean hasFuncCallSeg() {
-		if (this.segments == null || this.segments.length == 0) {
+		if (ArrayUtil.isEmpty(this.segments)) {
 			return false;
 		}
 
@@ -37,19 +37,26 @@ public class PrimaryExpr extends Expr {
 	}
 
 	public boolean isFuncCallExpr() {
-		return this.segments != null
-			&& this.segments.length > 0
+		return !ArrayUtil.isEmpty(this.segments)
 			&& !(ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
 	}
 
-	public boolean isVarExpr() {
-		return this.segments == null || this.segments.length == 0;
+	public boolean isIndexExpr() {
+		return !ArrayUtil.isEmpty(this.segments)
+			&& (ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
 	}
 
-	public boolean isIndexExpr() {
-		return this.segments != null
-			&& this.segments.length > 0
-			&& (ArrayUtil.get(this.segments, -1) instanceof FieldSegment);
+	public boolean isAssignable() {
+		if (!ArrayUtil.isEmpty(this.segments)) {
+			return isIndexExpr();
+		}
+		if (this.prefixExpr instanceof Var) {
+			return true;
+		} else if (this.prefixExpr instanceof PrimaryExpr) {
+			return ((PrimaryExpr)this.prefixExpr).isAssignable();
+		} else {
+			return false;
+		}
 	}
 
 	public boolean hasMultRet() {
@@ -58,7 +65,13 @@ public class PrimaryExpr extends Expr {
 
 	public String toCode() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(this.prefixExpr.toCode());
+		if (this.prefixExpr instanceof Var) {
+			sb.append(this.prefixExpr.toCode());
+		} else {
+			sb.append("(");
+			sb.append(this.prefixExpr.toCode());
+			sb.append(")");
+		}
 		if (this.segments != null) {
 			for (Segment seg : this.segments) {
 				sb.append(seg.toCode());

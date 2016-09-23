@@ -8,6 +8,7 @@ import lamo.luaj.vm.OpCode;
 import lamo.luaj.vm.Proto;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 
 public class Translator {
@@ -118,6 +119,8 @@ public class Translator {
 			}
 		} else if (stat instanceof ReturnStat) {
 			translateReturnStat((ReturnStat)stat);
+		} else if (stat instanceof AssignStat) {
+			translateAssignStat((AssignStat)stat);
 		}
 	}
 
@@ -127,24 +130,7 @@ public class Translator {
 			addLocalVar(n);
 		}
 		Expr[] es = stat.getExprs();
-		int extra = names.length;
-		if (es != null) {
-			extra -= es.length;
-			Expr e = null;
-			for (int i = 0; i < es.length; ++i) {
-				e = es[i];
-				translateExpr(e, RA_NEXT);
-			}
-			if (e.hasMultRet()) {
-				Instruction last = ArrayUtil.get(getCode(), -1);
-				setReturns(last, extra >= 0 ? extra + 1 : 0);
-				reserveReg(extra);
-				extra = 0;
-			}
-		}
-		if (extra > 0) {
-			loadNil(reserveReg(extra), extra);
-		}
+		translateAssignValues(es, names.length);
 	}
 
 	private void translateFuncStat(FuncStat stat) {
@@ -188,6 +174,78 @@ public class Translator {
 			}
 		}
 		ret(first, nret);
+	}
+
+	private void translateAssignStat(AssignStat stat) {
+		PrimaryExpr[] vars = stat.getVariables();
+		Expr[] vs = stat.getValues();
+
+		ArrayList<AssignVarInfo> infos = new ArrayList<>();
+		for (PrimaryExpr var : vars) {
+			infos.add(translateAssignVar(var));
+		}
+
+		int start = this.freeReg;
+		translateAssignValues(vs, vars.length);
+		for (int i = infos.size() - 1; i >= 0; --i) {
+			storeVar(infos.get(i), start + i);
+		}
+	}
+
+	private AssignVarInfo translateAssignVar(PrimaryExpr var) {
+		Expr prefix = var.getPrefixExpr();
+		PrimaryExpr.Segment[] segments = var.getSegments();
+
+		if (!ArrayUtil.isEmpty(segments)) {
+			PrimaryExpr pe = new PrimaryExpr();
+			pe.setPrefixExpr(prefix);
+			if (segments.length > 1) {
+				pe.setSegments(Arrays.copyOfRange(segments, 0, segments.length - 1));
+			}
+			int table = translatePrimaryExpr(pe, RA_NEXT);
+			Expr key = ((PrimaryExpr.FieldSegment)ArrayUtil.get(segments, -1)).getKey();
+			return AssignVarInfo.table(table, key);
+		} else if (prefix instanceof Var) {
+			VarInfo info = singleVar(((Var)prefix).getName());
+			if (info.type == VarInfo.LOCAL) {
+				return AssignVarInfo.local(info.index);
+			} else if (info.type == VarInfo.UPVALUE) {
+				return AssignVarInfo.upvalue(info.index);
+			} else if (info.type == VarInfo.GLOBAL) {
+				return AssignVarInfo.global(info.index);
+			} else {
+				assert false;
+				return null;
+			}
+		} else if (prefix instanceof PrimaryExpr) {
+			return translateAssignVar((PrimaryExpr)prefix);
+		} else {
+			assert false;
+			return null;
+		}
+	}
+
+	private int translateAssignValues(Expr[] vs, int need) {
+		int extra = need;
+		if (vs != null) {
+			extra -= vs.length;
+			Expr v = null;
+			for (int i = 0; i < vs.length; ++i) {
+				v = vs[i];
+				translateExpr(v, RA_NEXT);
+			}
+			if (v.hasMultRet()) {
+				Instruction last = ArrayUtil.get(getCode(), -1);
+				setReturns(last, extra >= 0 ? extra + 1 : 0);
+				reserveReg(extra);
+				extra = 0;
+			}
+		}
+		if (extra > 0) {
+			loadNil(reserveReg(extra), extra);
+		}
+
+		return this.freeReg;
 	}
 
 	private int translateExpr(Expr e, int alloc) {
@@ -281,23 +339,25 @@ public class Translator {
 
 	private int translatePrimaryExpr(PrimaryExpr expr, int alloc) {
 		int start = this.freeReg;
+		PrimaryExpr.Segment[] segments = expr.getSegments();
+		Expr prefixExpr = expr.getPrefixExpr();
 
 		int prefixAlloc;
-		if (expr.isVarExpr()) {
+		if (ArrayUtil.isEmpty(segments)) {
 			prefixAlloc = alloc;
-		} else if (expr.getSegments()[0] instanceof PrimaryExpr.ArgsSegment) {
+		} else if (segments[0] instanceof PrimaryExpr.ArgsSegment) {
 			prefixAlloc = RA_NEXT;
 		} else {
 			prefixAlloc = RA_ANY;
 		}
-		Expr prefixExpr = expr.getPrefixExpr();
+
 		int table;
 		if (prefixExpr instanceof Var) {
 			table = translateVar((Var)prefixExpr, prefixAlloc);
 		} else {
 			table = translateExpr(prefixExpr, prefixAlloc);
 		}
-		if (expr.isVarExpr()) {
+		if (ArrayUtil.isEmpty(segments)) {
 			return table;
 		}
 
@@ -389,15 +449,18 @@ public class Translator {
 
 	private int translateFuncBody(FuncBody body, int alloc) {
 		Translator t = new Translator(body.getChunk(), this);
-		t.vararg = body.getParlist().isVararg();
 		if (body.isNeedSelf()) {
 			t.numParams++;
 			t.addLocalVar("self");
 		}
-		if (body.getParlist() != null && body.getParlist().getParams() != null) {
-			for (String p : body.getParlist().getParams()) {
-				t.numParams++;
-				t.addLocalVar(p);
+		FuncBody.Parlist params = body.getParlist();
+		if (params != null) {
+			t.vararg = params.isVararg();
+			if (params.getParams() != null) {
+				for (String p : params.getParams()) {
+					t.numParams++;
+					t.addLocalVar(p);
+				}
 			}
 		}
 
@@ -557,7 +620,23 @@ public class Translator {
 			ts.add(t);
 		} while ((t = t.getParent()) != null);
 
+		info.index = addKString(name);
 		return info;
+	}
+
+	private void storeVar(AssignVarInfo info, int reg) {
+		if (info.type == AssignVarInfo.LOCAL) {
+			move(info.info, reg);
+		} else if (info.type == AssignVarInfo.UPVALUE) {
+			instruction(new Instruction(OpCode.SETUPVALUE, reg, info.info, 0));
+		} else if (info.type == AssignVarInfo.GLOBAL) {
+			instruction(new Instruction(OpCode.SETGLOBAL, reg, info.info));
+		} else if (info.type == AssignVarInfo.TABLE) {
+			int key = translateExpr(info.key, RA_RK);
+			instruction(new Instruction(OpCode.SETTABLE, info.info, key, reg));
+		} else {
+			assert false;
+		}
 	}
 
 	private void index(int to, int table, int key) {

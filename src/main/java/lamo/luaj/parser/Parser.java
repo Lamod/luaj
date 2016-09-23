@@ -246,7 +246,7 @@ public class Parser implements Closeable {
 		varList.add(var);
 		while (tryMatch(TType.COMMA) != null) {
 			var = parsePrimaryExpr();
-			if (var.isFuncCallExpr()) {
+			if (!var.isAssignable()) {
 				throw new ParserException();
 			}
 			varList.add(var);
