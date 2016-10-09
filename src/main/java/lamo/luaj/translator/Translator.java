@@ -16,6 +16,7 @@ public class Translator {
 	static public final int RA_NEXT = -1;
 	static public final int RA_ANY = -2;
 	static public final int RA_RK = -3;
+	static public final int RA_NONE = -4;
 
 	private Chunk chunk;
 	private int numParams;
@@ -252,7 +253,7 @@ public class Translator {
 	}
 
 	private int translateExpr(Expr e, int alloc) {
-		int start = this.freeReg, result = -1;
+		int start = this.freeReg, result = Instruction.NO_REG;
 		if (e instanceof KExpr) {
 			result = translateKExpr((KExpr)e, alloc);
 		} else if (e instanceof PrimaryExpr) {
@@ -261,13 +262,12 @@ public class Translator {
 			FuncBody body = ((FuncExpr) e).getBody();
 			result = translateFuncBody(body, alloc);
 		} else if (e instanceof VarargExpr) {
-			assert alloc == RA_NEXT;
 			result = reserveReg(1);
 			instruction(new Instruction(OpCode.VARARG, result, 2, 0));
 		} else if (e instanceof BinaryExpr) {
-
+			result = translateBinaryExpr((BinaryExpr)e, alloc);
 		} else if (e instanceof UnaryExpr) {
-
+			result = translateUnaryExpr((UnaryExpr)e, alloc);
 		} else if (e instanceof TableConstructorExpr) {
 			result = translateTableConstructor((TableConstructorExpr)e, alloc);
 		} else {
@@ -340,6 +340,122 @@ public class Translator {
 		}
 	}
 
+	private int translateBinaryExpr(BinaryExpr expr, int alloc) {
+		switch (expr.getOperator()) {
+			case ADD: case SUB: case MULTI: case DIVIDE: case MODE: case POWER: case CONCAT:
+				return translateArithmaticExpr(expr, alloc);
+			case LESS_EQUAL: case LESS_THAN: case GREATE_EQUAL: case GREATE_THAN: case EQUAL: case NOT_EQUAL:
+				return translateCompareExpr(expr, alloc);
+			default:
+				assert false;
+				return Instruction.NO_REG;
+		}
+	}
+
+	private int translateCompareExpr(BinaryExpr expr, int alloc) {
+		int cond = 1;
+		OpCode op = null;
+		switch (expr.getOperator()) {
+			case NOT_EQUAL: cond = 0;
+			case EQUAL: op = OpCode.EQ; break;
+			case GREATE_THAN: cond = 0;
+			case LESS_THAN: op = OpCode.LT; break;
+			case GREATE_EQUAL: cond = 0;
+			case LESS_EQUAL: op = OpCode.LE; break;
+		}
+
+		int start = this.freeReg;
+		int left = translateExpr(expr.getLeft(), RA_RK), right = translateExpr(expr.getRight(), RA_RK);
+		this.freeReg = start;
+
+		if (cond == 0 && op != OpCode.EQ) {
+			int temp = left;
+			left = right;
+			right = temp;
+			cond = 1;
+		}
+		instruction(new Instruction(op, cond, left, right));
+		Instruction jmp = new Instruction(OpCode.JMP, 0, Instruction.NO_REG);
+		instruction(jmp);
+		if (alloc != RA_NONE) {
+			int reg = requestReg(alloc);
+			jmp.setBx(1);
+			instruction(new Instruction(OpCode.LOADBOOL, reg, 0, 1));
+			instruction(new Instruction(OpCode.LOADBOOL, reg, 1, 0));
+			return reg;
+		}
+
+		return Instruction.NO_REG;
+	}
+
+	private int translateArithmaticExpr(BinaryExpr expr, int alloc) {
+		LValue fv = expr.foldedValue();
+		if (fv != null) {
+			return translateLValue(fv, alloc);
+		}
+
+		OpCode op = null;
+		switch (expr.getOperator()) {
+			case ADD: op = OpCode.ADD; break;
+			case SUB: op = OpCode.SUB; break;
+			case MULTI: op = OpCode.MUL; break;
+			case DIVIDE: op = OpCode.DIV; break;
+			case MODE: op = OpCode.MOD; break;
+			case POWER: op = OpCode.POW; break;
+			case CONCAT: op = OpCode.CONCAT; break;
+			default:
+				assert false;
+		}
+
+		int start = this.freeReg;
+		int left, right;
+		boolean needMerge = false;
+		if (op == OpCode.CONCAT) {
+			Expr re = expr.getRight();
+			left = translateExpr(expr.getLeft(), RA_NEXT);
+			right = translateExpr(re, RA_NEXT);
+			needMerge = re instanceof BinaryExpr
+				&& ((BinaryExpr)re).getOperator() == BinaryExpr.Operator.CONCAT;
+		} else {
+			left = translateExpr(expr.getLeft(), RA_RK);
+			right = translateExpr(expr.getRight(), RA_RK);
+		}
+		this.freeReg = start;
+		int result = requestReg(alloc);
+		if (needMerge) {
+			Instruction inst = ArrayUtil.get(getCode(), -1);
+			assert inst.getOpCode() == OpCode.CONCAT && inst.getB() == left + 1;
+			inst.setB(left);
+			inst.setA(result);
+		} else {
+			instruction(new Instruction(op, result, left, right));
+		}
+
+		return result;
+	}
+
+	private int translateUnaryExpr(UnaryExpr expr, int alloc) {
+		LValue fv = expr.foldedValue();
+		if (fv != null) {
+			return translateLValue(fv, alloc);
+		}
+
+		OpCode op = null;
+		switch (expr.getOperator()) {
+			case MINUS: op = OpCode.UNM; break;
+			case NOT: op = OpCode.NOT; break;
+			case LENGTH: op = OpCode.LEN; break;
+		}
+
+		int start = this.freeReg;
+		int operand = translateExpr(expr.getOperand(), RA_ANY);
+		this.freeReg = start;
+		int result = requestReg(alloc);
+		instruction(new Instruction(op, result, operand, 0));
+
+		return result;
+	}
+
 	private int translatePrimaryExpr(PrimaryExpr expr, int alloc) {
 		int start = this.freeReg;
 		PrimaryExpr.Segment[] segments = expr.getSegments();
@@ -366,6 +482,7 @@ public class Translator {
 
 		int base;
 		if (table != start) {
+			//FIXME
 			assert this.freeReg == start;
 			base = reserveReg(1);
 		} else {
@@ -418,28 +535,25 @@ public class Translator {
 
 	private int translateVar(Var var, int alloc) {
 		VarInfo info = singleVar(var.getName());
-		int reg = alloc >= 0 ? alloc : reserveReg(1);
+		int reg = Instruction.NO_REG;
 		switch (info.type) {
 			case VarInfo.LOCAL:
-				if (alloc >= RA_NEXT) {
+				if (alloc == RA_NEXT) {
+					reg = requestReg(alloc);
 					move(reg, info.index);
-				}
-				if (alloc != RA_NEXT){
-					reserveReg(-1);
+				} else {
 					reg = info.index;
 				}
 				break;
 			case VarInfo.UPVALUE: {
 				UpValue uv = this.upvalues.get(info.index);
-				if (uv.inSameLevel) {
-					move(reg, uv.index);
-				} else {
-					instruction(new Instruction(OpCode.GETUPVALUE, reg, uv.index, 0));
-				}
+				reg = requestReg(alloc);
+				instruction(new Instruction(OpCode.GETUPVALUE, reg, uv.index, 0));
 				break;
 			}
 			case VarInfo.GLOBAL: {
 				int idx = addKString(var.getName());
+				reg = requestReg(alloc);
 				instruction(new Instruction(OpCode.GETGLOBAL, reg, idx));
 				break;
 			}
@@ -468,7 +582,7 @@ public class Translator {
 		}
 
 		Proto p = t.translate();
-		int reg = alloc >= 0 ? alloc : reserveReg(1);
+		int reg = requestReg(alloc);
 		this.ps.add(p);
 		instruction(new Instruction(OpCode.CLOSURE, reg, this.ps.size() - 1));
 		UpValue uv;
@@ -485,25 +599,26 @@ public class Translator {
 	}
 
 	private int translateKExpr(KExpr e, int alloc) {
-		int i = addK(e.toLuaValue());
-		if (alloc == RA_RK) {
+		return translateLValue(e.toLuaValue(), alloc);
+	}
+
+	private int translateLValue(LValue v, int alloc) {
+		int i = addK(v);
+		if (alloc <= RA_RK) {
 			return Instruction.setAsK(i);
 		}
 
-		int reg = alloc >= 0 ? alloc : reserveReg(1);
-		if (e instanceof Nil) {
+		int reg = requestReg(alloc);
+		if (v instanceof LNil) {
 			loadNil(reg);
-		} else if (e instanceof True) {
-			loadBoolean(true, reg);
-		} else if (e instanceof False) {
-			loadBoolean(false, reg);
-		} else if (e instanceof LiteralNumber) {
-			loadK(i, reg);
-		} else if (e instanceof LiteralString) {
+		} else if (v instanceof LBoolean) {
+			loadBoolean(((LBoolean) v).getValue(), reg);
+		} else if (v instanceof LNumber || v instanceof LString) {
 			loadK(i, reg);
 		} else {
 			assert false;
 		}
+
 		return reg;
 	}
 
@@ -709,6 +824,14 @@ public class Translator {
 		return this.code;
 	}
 
+	private int requestReg(int alloc) {
+		if (alloc >= 0) {
+			return alloc;
+		} else {
+			return reserveReg(1);
+		}
+	}
+
 	private int reserveReg(int n) {
 		int reg = this.freeReg;
 		this.freeReg += n;
@@ -724,6 +847,8 @@ public class Translator {
 			assert isAny(start, result);
 		} else if (alloc == RA_RK) {
 			assert isRK(start, result);
+		} else if (alloc == RA_NONE) {
+			assert isNone(start, result);
 		} else {
 			assert false;
 		}
@@ -739,6 +864,10 @@ public class Translator {
 
 	private boolean isRK(int start, int result) {
 		return Instruction.isK(result) || isAny(start, result);
+	}
+
+	private boolean isNone(int start, int result) {
+		return result == Instruction.NO_REG || isRK(start, result);
 	}
 
 }

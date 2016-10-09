@@ -1,9 +1,11 @@
 package lamo.luaj.parser.ast;
 
+import lamo.luaj.LNumber;
+import lamo.luaj.LValue;
 import lamo.luaj.parser.Token;
 import lamo.luaj.parser.Token.TType;
 
-public class BinaryExpr extends Expr {
+public class BinaryExpr extends Expr implements Foldable {
 
 	public enum Operator {
  		OR(1, 1, "or"),
@@ -11,7 +13,7 @@ public class BinaryExpr extends Expr {
 		GREATE_THAN(3, 3, ">"), GREATE_EQUAL(3, 3, ">="), LESS_THAN(3, 3, "<"), LESS_EQUAL(3, 3, "<="),
 		EQUAL(3, 3, "=="), NOT_EQUAL(3, 3, "~="),
 		CONCAT(5, 4, ".."),
-		ADD(6, 6, "+"), MINUS(6, 6, "-"),
+		ADD(6, 6, "+"), SUB(6, 6, "-"),
 		MULTI(7, 7, "*"), DIVIDE(7, 7, "/"), MODE(7, 7, "%"),
 		POWER(10, 9, "^"), 
 		;
@@ -51,15 +53,15 @@ public class BinaryExpr extends Expr {
 		switch (type) {
 			case OR: return Operator.OR;
 			case AND: return Operator.AND;
-			case GREATE_THAN: return Operator.GREATE_THAN;
-			case GREATE_EQUAL: return Operator.GREATE_EQUAL;
+			case GREAT_THAN: return Operator.GREATE_THAN;
+			case GREAT_EQUAL: return Operator.GREATE_EQUAL;
 			case LESS_THAN: return Operator.LESS_THAN;
 			case LESS_EQUAL: return Operator.LESS_EQUAL;
 			case EQUAL: return Operator.EQUAL;
 			case NOT_EQUAL: return Operator.NOT_EQUAL;
 			case CONCAT: return Operator.CONCAT;
 			case ADD: return Operator.ADD;
-			case MINUS: return Operator.MINUS;
+			case MINUS: return Operator.SUB;
 			case MULTI: return Operator.MULTI;
 			case DIVIDE: return Operator.DIVIDE;
 			case MODE: return Operator.MODE;
@@ -116,6 +118,43 @@ public class BinaryExpr extends Expr {
 		this.closed = closed;
 	}
 
+	public LNumber foldedValue() {
+		LNumber ln = operandToLuaNumber(this.left), rn = operandToLuaNumber(this.right);
+		if (ln == null || rn == null) {
+			return null;
+		}
+
+		double l = ln.getValue(), r = rn.getValue(), res = 0;
+		switch (this.operator) {
+			case ADD:
+				res = l + r;
+				break;
+			case SUB:
+				res = l - r;
+				break;
+			case MULTI:
+				res = l * r;
+				break;
+			case DIVIDE:
+				res = l / r;
+				break;
+			case MODE:
+				if (r == 0) {
+					return null;
+				} else {
+					res = l % r;
+				}
+				break;
+			case POWER:
+				res = Math.pow(l, r);
+				break;
+			default:
+				return null;
+
+		}
+		return new LNumber(res);
+	}
+
 	public String toCode() {
 		StringBuilder sb = new StringBuilder();
 		if (this.closed) {
@@ -131,6 +170,17 @@ public class BinaryExpr extends Expr {
 		}
 
 		return sb.toString();
+	}
+
+	private static LNumber operandToLuaNumber(Expr operand) {
+		if (operand instanceof LiteralNumber) {
+			return new LNumber(Double.parseDouble(((LiteralNumber) operand).getText()));
+		} else if (operand instanceof Foldable) {
+			LValue v = ((Foldable) operand).foldedValue();
+			return (v instanceof LNumber) ? (LNumber)v : null;
+		} else {
+			return null;
+		}
 	}
 
 }

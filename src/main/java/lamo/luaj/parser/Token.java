@@ -12,8 +12,8 @@ public class Token {
 		DIVIDE,// /
 		POWER, // ^
 		MODE, // %
-		GREATE_THAN, // >
-		GREATE_EQUAL, // >=
+		GREAT_THAN, // >
+		GREAT_EQUAL, // >=
 		LESS_THAN, // <
 		LESS_EQUAL, // <=
 		EQUAL, // ==

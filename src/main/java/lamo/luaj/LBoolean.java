@@ -7,6 +7,17 @@ public class LBoolean extends LValue {
 
 	private LBoolean() { }
 
+	public boolean getValue() {
+		if (this == TRUE) {
+			return true;
+		} else if (this == FALSE) {
+			return false;
+		} else {
+			assert false;
+			return false;
+		}
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		return o == this;

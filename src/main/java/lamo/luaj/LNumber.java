@@ -12,6 +12,10 @@ public class LNumber extends LValue {
 		this.value = value;
 	}
 
+	public double getValue() {
+		return this.value;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (o == this) {

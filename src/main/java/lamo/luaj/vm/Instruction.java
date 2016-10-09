@@ -20,6 +20,8 @@ public class Instruction {
 	static public final int MAX_Bx = (1 << SIZE_Bx) - 1;
 	static public final int MAX_sBx = MAX_Bx >> 1; // sign bit
 
+	static public final int NO_REG = MAX_A;
+
 	static public int mask1(int n, int p) {
 		return ~(~(int)0 << n) << p;
 	}

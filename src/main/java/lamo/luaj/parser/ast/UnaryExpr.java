@@ -1,14 +1,17 @@
 package lamo.luaj.parser.ast;
 
+import lamo.luaj.LBoolean;
+import lamo.luaj.LNumber;
+import lamo.luaj.LValue;
 import lamo.luaj.parser.Token;
 import lamo.luaj.parser.Token.TType;
 
-public class UnaryExpr extends Expr {
+public class UnaryExpr extends Expr implements Foldable {
 
 	static public final int OP_PRIORITY = 8;
 
 	public enum Operator {
-		NEGATIVE("-"), LENGTH("#"), NOT("not");
+		MINUS("-"), LENGTH("#"), NOT("not");
 
 		private String token;
 
@@ -32,7 +35,7 @@ public class UnaryExpr extends Expr {
 
 	static public Operator getOperator(TType tokenType) {
 		switch (tokenType) {
-			case MINUS: return Operator.NEGATIVE;
+			case MINUS: return Operator.MINUS;
 			case LENGTH: return Operator.LENGTH;
 			case NOT: return Operator.NOT;
 			default: return null;
@@ -56,6 +59,31 @@ public class UnaryExpr extends Expr {
 
 	public void setOperator(Operator op) {
 		this.operator = op;
+	}
+
+	public LValue foldedValue() {
+		switch (this.operator) {
+			case MINUS:
+				if (this.operand instanceof LiteralNumber) {
+					return new LNumber(-Double.parseDouble(((LiteralNumber) this.operand).getText()));
+				} else if (this.operand instanceof BinaryExpr) {
+					LNumber n = ((BinaryExpr) this.operand).foldedValue();
+					return new LNumber(-n.getValue());
+				}
+				break;
+			case NOT:
+				if (operand instanceof Nil || operand instanceof False) {
+					return LBoolean.TRUE;
+				} else if (operand instanceof True
+						|| operand instanceof LiteralNumber
+						|| operand instanceof LiteralString) {
+					return LBoolean.FALSE;
+				}
+				break;
+			default:
+				break;
+		}
+		return null;
 	}
 
 	public String toCode() {

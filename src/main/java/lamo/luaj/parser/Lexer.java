@@ -100,17 +100,17 @@ public class Lexer implements Closeable {
                     consume();
                     if (current == '=') {
                         consume();
-                        return new Token(TType.GREATE_EQUAL);
+                        return new Token(TType.LESS_EQUAL);
                     } else {
-                        return new Token(TType.GREATE_THAN);
+                        return new Token(TType.LESS_THAN);
                     }
                 case '>':
                     consume();
                     if (current == '=') {
                         consume();
-                        return new Token(TType.LESS_EQUAL);
+                        return new Token(TType.GREAT_EQUAL);
                     } else {
-                        return new Token(TType.LESS_THAN);
+                        return new Token(TType.GREAT_THAN);
                     }
                 case '(':
                     consume();

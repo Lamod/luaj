@@ -10,6 +10,10 @@ public class LString extends LValue {
 		this.string = str;
 	}
 
+	public String getString() {
+		return this.string;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (o == this) {
