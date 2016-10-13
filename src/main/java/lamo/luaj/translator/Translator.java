@@ -10,6 +10,7 @@ import lamo.luaj.vm.Proto;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 
 public class Translator {
 
@@ -127,11 +128,12 @@ public class Translator {
 
 	private void translateLocalStat(LocalStat stat) {
 		String[] names = stat.getNames();
+		Expr[] es = stat.getExprs();
+		translateAssignValues(es, names.length);
+
 		for (String n : names) {
 			addLocalVar(n);
 		}
-		Expr[] es = stat.getExprs();
-		translateAssignValues(es, names.length);
 	}
 
 	private void translateFuncStat(FuncStat stat) {
@@ -253,9 +255,12 @@ public class Translator {
 	}
 
 	private int translateExpr(Expr e, int alloc) {
+		e = ExprUtil.reduce(e);
 		int start = this.freeReg, result = Instruction.NO_REG;
 		if (e instanceof KExpr) {
-			result = translateKExpr((KExpr)e, alloc);
+			result = translateKExpr((KExpr) e, alloc);
+		} else if (e instanceof Var) {
+			result = translateVar((Var)e, alloc);
 		} else if (e instanceof PrimaryExpr) {
 			result = translatePrimaryExpr((PrimaryExpr)e, alloc);
 		} else if (e instanceof FuncExpr) {
@@ -341,27 +346,131 @@ public class Translator {
 	}
 
 	private int translateBinaryExpr(BinaryExpr expr, int alloc) {
-		switch (expr.getOperator()) {
-			case ADD: case SUB: case MULTI: case DIVIDE: case MODE: case POWER: case CONCAT:
-				return translateArithmaticExpr(expr, alloc);
-			case LESS_EQUAL: case LESS_THAN: case GREATE_EQUAL: case GREATE_THAN: case EQUAL: case NOT_EQUAL:
-				return translateCompareExpr(expr, alloc);
-			default:
-				assert false;
-				return Instruction.NO_REG;
+		if (ExprUtil.isArithExpr(expr)) {
+			return translateArithExpr(expr, alloc);
+		} else if (ExprUtil.isCompExpr(expr)) {
+			return translateCompExpr(expr, alloc);
+		} else {
+			assert ExprUtil.isLogicalExpr(expr);
+			return translateLogicalExpr(expr, alloc);
 		}
 	}
 
-	private int translateCompareExpr(BinaryExpr expr, int alloc) {
-		int cond = 1;
-		OpCode op = null;
-		switch (expr.getOperator()) {
-			case NOT_EQUAL: cond = 0;
-			case EQUAL: op = OpCode.EQ; break;
-			case GREATE_THAN: cond = 0;
-			case LESS_THAN: op = OpCode.LT; break;
-			case GREATE_EQUAL: cond = 0;
-			case LESS_EQUAL: op = OpCode.LE; break;
+	private int translateLogicalExpr(BinaryExpr expr, int alloc) {
+		if (alloc < RA_NEXT) {
+			alloc = RA_NEXT;
+		}
+		LogicalContext ctx = logicalOperand(expr, true, alloc);
+		return closeLogicalContext(ctx, alloc);
+	}
+
+	private int closeLogicalContext(LogicalContext ctx, int alloc) {
+		int pc, pf = Instruction.NO_JUMP, pt = Instruction.NO_JUMP, reg = ctx.reg;
+		if (ctx.needValue) {
+			if (reg == Instruction.NO_REG) {
+				reg = requestReg(alloc);
+			}
+			pt = compValue(reg);
+			pc = pt + 1;
+			pf = pt - 1;
+		} else {
+			pc = pc();
+		}
+		patchList(ctx.fs, pc, pf, reg);
+		patchList(ctx.ts, pc, pt, reg);
+
+		ctx.reg = reg;
+		return reg;
+	}
+
+	private LogicalContext logicalLeftOperand(Expr expr, boolean goIfTrue) {
+		expr = ExprUtil.reduce(expr);
+		if (ExprUtil.isLogicalExpr(expr)) {
+			return logicalOperand((BinaryExpr)expr, goIfTrue, RA_NONE);
+		} else if (ExprUtil.isCompExpr(expr)) {
+			return logicalCompOperand((BinaryExpr)expr, goIfTrue);
+		} else if (expr instanceof LiteralNumber
+				|| expr instanceof LiteralString
+				|| expr instanceof True) {
+			return new LogicalContext();
+		} else {
+			return logicalNormalOperand(expr, goIfTrue);
+		}
+	}
+
+	private LogicalContext logicalRightOperand(Expr expr, boolean goIfTrue, int alloc) {
+		expr = ExprUtil.reduce(expr);
+		if (ExprUtil.isLogicalExpr(expr)) {
+			return logicalOperand((BinaryExpr)expr, goIfTrue, alloc);
+		} else if (ExprUtil.isCompExpr(expr)) {
+			return logicalCompOperand((BinaryExpr)expr, alloc == RA_NONE && goIfTrue);
+		} else if (expr instanceof Nil || expr instanceof False) {
+			return new LogicalContext();
+		} else {
+			if (alloc == RA_NONE) {
+				return logicalNormalOperand(expr, goIfTrue);
+			} else {
+				return new LogicalContext(translateExpr(expr, alloc));
+			}
+		}
+	}
+
+	private LogicalContext logicalOperand(BinaryExpr expr, boolean goIfTrue, int alloc) {
+		boolean and = expr.getOperator() == BinaryExpr.Operator.AND;
+		LogicalContext left = logicalLeftOperand(expr.getLeft(), and);
+		patchToHere(left.get(and));
+
+		LogicalContext right = logicalRightOperand(expr.getRight(), goIfTrue, alloc);
+		right.merge(left);
+
+		return right;
+	}
+
+	private LogicalContext logicalCompOperand(BinaryExpr expr, boolean goIfTrue) {
+		LogicalContext ctx = new LogicalContext(translateCompExpr(expr, RA_NONE));
+		if (goIfTrue) {
+			Instruction inst = ArrayUtil.get(getCode(), -2);
+			inst.setA(inst.getA() == 0);
+		}
+		ctx.add(pc() - 1, !goIfTrue);
+		ctx.needValue = true;
+
+		return ctx;
+	}
+
+	private LogicalContext logicalNormalOperand(Expr expr, boolean goIfTrue) {
+		int reg = translateExpr(expr, RA_ANY);
+		freeReg(reg);
+
+		LogicalContext ctx = new LogicalContext(reg);
+		int jmp;
+		if (expr instanceof UnaryExpr
+				&& ((UnaryExpr)expr).getOperator() == UnaryExpr.Operator.NOT) {
+			ctx.needValue = true;
+			int not = pc() - 1;
+			int a = getCode().get(not).getB();
+			getCode().remove(not);
+			jmp = condJump(OpCode.TEST, a, 0, goIfTrue ? 1 : 0);
+		} else {
+			jmp = condJump(OpCode.TESTSET, Instruction.NO_REG, reg, goIfTrue ? 0 : 1);
+		}
+		ctx.add(jmp, !goIfTrue);
+
+		return ctx;
+	}
+
+	private int translateCompExpr(BinaryExpr expr, int alloc) {
+		BinaryExpr.Operator operator = expr.getOperator();
+		OpCode op = ExprUtil.toCompOpCode(operator);
+		assert op != null;
+
+		int cond;
+		if (operator == BinaryExpr.Operator.NOT_EQUAL
+				|| operator == BinaryExpr.Operator.GREATE_THAN
+				|| operator == BinaryExpr.Operator.GREATE_EQUAL) {
+			cond = 0;
+		} else {
+			cond = 1;
 		}
 
 		int start = this.freeReg;
@@ -374,38 +483,25 @@ public class Translator {
 			right = temp;
 			cond = 1;
 		}
-		instruction(new Instruction(op, cond, left, right));
-		Instruction jmp = new Instruction(OpCode.JMP, 0, Instruction.NO_REG);
-		instruction(jmp);
+		Instruction jmp = getCode().get(condJump(op, cond, left, right));
 		if (alloc != RA_NONE) {
 			int reg = requestReg(alloc);
 			jmp.setBx(1);
-			instruction(new Instruction(OpCode.LOADBOOL, reg, 0, 1));
-			instruction(new Instruction(OpCode.LOADBOOL, reg, 1, 0));
+			compValue(reg);
 			return reg;
 		}
 
 		return Instruction.NO_REG;
 	}
 
-	private int translateArithmaticExpr(BinaryExpr expr, int alloc) {
+	private int translateArithExpr(BinaryExpr expr, int alloc) {
 		LValue fv = expr.foldedValue();
 		if (fv != null) {
 			return translateLValue(fv, alloc);
 		}
 
-		OpCode op = null;
-		switch (expr.getOperator()) {
-			case ADD: op = OpCode.ADD; break;
-			case SUB: op = OpCode.SUB; break;
-			case MULTI: op = OpCode.MUL; break;
-			case DIVIDE: op = OpCode.DIV; break;
-			case MODE: op = OpCode.MOD; break;
-			case POWER: op = OpCode.POW; break;
-			case CONCAT: op = OpCode.CONCAT; break;
-			default:
-				assert false;
-		}
+		OpCode op = ExprUtil.toArithOpCode(expr.getOperator());
+		assert op != null;
 
 		int start = this.freeReg;
 		int left, right;
@@ -462,24 +558,13 @@ public class Translator {
 		Expr prefixExpr = expr.getPrefixExpr();
 
 		int prefixAlloc;
-		if (ArrayUtil.isEmpty(segments)) {
-			prefixAlloc = alloc;
-		} else if (segments[0] instanceof PrimaryExpr.ArgsSegment) {
+		if (segments[0] instanceof PrimaryExpr.ArgsSegment) {
 			prefixAlloc = RA_NEXT;
 		} else {
 			prefixAlloc = RA_ANY;
 		}
 
-		int table;
-		if (prefixExpr instanceof Var) {
-			table = translateVar((Var)prefixExpr, prefixAlloc);
-		} else {
-			table = translateExpr(prefixExpr, prefixAlloc);
-		}
-		if (ArrayUtil.isEmpty(segments)) {
-			return table;
-		}
-
+		int table = translateExpr(prefixExpr, prefixAlloc);
 		int base;
 		if (table != start) {
 			//FIXME
@@ -538,7 +623,7 @@ public class Translator {
 		int reg = Instruction.NO_REG;
 		switch (info.type) {
 			case VarInfo.LOCAL:
-				if (alloc == RA_NEXT) {
+				if (alloc >= RA_NEXT) {
 					reg = requestReg(alloc);
 					move(reg, info.index);
 				} else {
@@ -681,6 +766,60 @@ public class Translator {
 		return -1;
 	}
 
+	private void patchToHere(List<Integer> js) {
+		int pc = pc();
+		patchList(js, pc, pc, Instruction.NO_REG);
+	}
+
+	private void patchList(List<Integer> list, int dest, int vdest, int reg) {
+		if (ArrayUtil.isEmpty(list)) {
+			return;
+		}
+
+		for (int jmp : list) {
+			if (!patchTestReg(jmp, reg)) {
+				fixJump(jmp, vdest);
+			} else {
+				fixJump(jmp, dest);
+			}
+		}
+		list.clear();
+	}
+
+	private void fixJump(int jmp, int dest) {
+		Instruction inst = getCode().get(jmp);
+		inst.setBx(dest - jmp - 1);
+	}
+
+	private boolean patchTestReg(int jmp, int reg) {
+		Instruction inst = ArrayUtil.get(getCode(), jmp - 1);
+		if (inst.getOpCode() != OpCode.TESTSET) {
+			return false;
+		}
+
+		if (reg == Instruction.NO_REG || reg == inst.getA()) {
+			inst.setOpCode(OpCode.TEST);
+			inst.setA(inst.getB());
+			inst.setB(0);
+		} else {
+			inst.setA(reg);
+		}
+		return true;
+	}
+
+	private int condJump(OpCode op, int a, int b, int c) {
+		instruction(new Instruction(op, a, b, c));
+		instruction(new Instruction(OpCode.JMP, 0, Instruction.NO_JUMP));
+
+		return pc() - 1;
+	}
+
+	private int compValue(int reg) {
+		instruction(new Instruction(OpCode.LOADBOOL, reg, 0, 1));
+		instruction(new Instruction(OpCode.LOADBOOL, reg, 1, 0));
+		return pc() - 1;
+	}
+
 	private int addKNumber(String n) {
 		return addK(new LNumber(Double.parseDouble(n)));
 	}
@@ -813,15 +952,21 @@ public class Translator {
 		instruction(new Instruction(OpCode.LOADK, reg, i));
 	}
 
-	private void instruction(Instruction inst) {
+	private Instruction instruction(Instruction inst) {
 		if (inst == null) {
-			return;
+			return null;
 		}
+
 		getCode().add(inst);
+		return inst;
 	}
 
 	private ArrayList<Instruction> getCode() {
 		return this.code;
+	}
+
+	private int pc() {
+		return this.code.size();
 	}
 
 	private int requestReg(int alloc) {
@@ -836,6 +981,14 @@ public class Translator {
 		int reg = this.freeReg;
 		this.freeReg += n;
 		return reg;
+	}
+
+	private int freeReg(int reg) {
+		if (reg == this.freeReg - 1 && reg >= this.actVars.size()) {
+			return --this.freeReg;
+		} else {
+			return -1;
+		}
 	}
 
 	private void checkRegAlloc(int alloc, int start, int result) {

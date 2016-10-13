@@ -21,6 +21,7 @@ public class Instruction {
 	static public final int MAX_sBx = MAX_Bx >> 1; // sign bit
 
 	static public final int NO_REG = MAX_A;
+	static public final int NO_JUMP = -1;
 
 	static public int mask1(int n, int p) {
 		return ~(~(int)0 << n) << p;
@@ -84,6 +85,10 @@ public class Instruction {
 		return setSegment(a, POS_A, SIZE_A);
 	}
 
+	public int setA(boolean a) {
+		return setA(a ? 1 : 0);
+	}
+
 	public int getB() {
 		return getSegment(POS_B, SIZE_B);
 	}
@@ -98,6 +103,10 @@ public class Instruction {
 
 	public int setC(int c) {
 		return setSegment(c, POS_C, SIZE_C);
+	}
+
+	public int setC(boolean c) {
+		return setC(c ? 1 : 0);
 	}
 
 	public int getBx() {
