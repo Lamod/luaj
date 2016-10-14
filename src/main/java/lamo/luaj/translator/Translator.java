@@ -105,6 +105,8 @@ public class Translator {
 	private void translateStat(Stat stat) {
 		if (stat instanceof IfStat) {
 			translateIfStat((IfStat)stat);
+		} else if (stat instanceof WhileStat) {
+			translateWhileStat((WhileStat)stat);
 		} else if (stat instanceof LocalStat) {
 			translateLocalStat((LocalStat)stat);
 		} else if (stat instanceof BlockStat) {
@@ -125,13 +127,19 @@ public class Translator {
 		}
 	}
 
+	private void translateWhileStat(WhileStat stat) {
+		int init = pc();
+		ArrayList<Integer> endList = testThenBlock(stat.getCondition(), stat.getBlock());
+		patchJump(jump(), init, init, Instruction.NO_REG);
+		patchToHere(endList);
+	}
+
 	private void translateIfStat(IfStat stat) {
 		ArrayList<Integer> elseList = null, endList = new ArrayList<>();
 		boolean first = true;
 		for (IfStat.Branch branch : stat.getBranchList()) {
 			if (!first) {
-				instruction(new Instruction(OpCode.JMP, 0, Instruction.NO_JUMP));
-				endList.add(pc() - 1);
+				endList.add(jump());
 				patchToHere(elseList);
 			} else {
 				first = false;
@@ -811,18 +819,22 @@ public class Translator {
 		}
 
 		for (int jmp : list) {
-			if (!patchTestReg(jmp, reg)) {
-				fixJump(jmp, vdest);
-			} else {
-				fixJump(jmp, dest);
-			}
+			patchJump(jmp, dest, vdest, reg);
 		}
 		list.clear();
 	}
 
+	private void patchJump(int jmp, int dest, int vdest, int reg) {
+		if (!patchTestReg(jmp, reg)) {
+			fixJump(jmp, vdest);
+		} else {
+			fixJump(jmp, dest);
+		}
+	}
+
 	private void fixJump(int jmp, int dest) {
 		Instruction inst = getCode().get(jmp);
-		inst.setBx(dest - jmp - 1);
+		inst.setsBx(dest - jmp - 1);
 	}
 
 	private boolean patchTestReg(int jmp, int reg) {
@@ -843,6 +855,10 @@ public class Translator {
 
 	private int condJump(OpCode op, int a, int b, int c) {
 		instruction(new Instruction(op, a, b, c));
+		return jump();
+	}
+
+	private int jump() {
 		instruction(new Instruction(OpCode.JMP, 0, Instruction.NO_JUMP));
 
 		return pc() - 1;
