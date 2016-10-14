@@ -7,7 +7,7 @@ import java.util.ArrayList;
 
 class LogicalContext {
 
-	ArrayList<Integer> ts, fs;
+	ArrayList<Integer> tlist, flist;
 	int reg;
 	boolean needValue;
 
@@ -20,22 +20,22 @@ class LogicalContext {
 	}
 
 	ArrayList<Integer> get(boolean ts) {
-		return ts ? this.ts : this.fs;
+		return ts ? this.tlist : this.flist;
 	}
 
-	void add(int jmp, boolean ts) {
+	void add(int jmp, boolean t) {
 		if (jmp == Instruction.NO_JUMP) {
 			return;
 		}
-		create(ts).add(jmp);
+		create(t).add(jmp);
 	}
 
-	void merge(LogicalContext another, boolean ts) {
-		ArrayList<Integer> list = another.get(ts);
+	void merge(LogicalContext another, boolean t) {
+		ArrayList<Integer> list = another.get(t);
 		if (ArrayUtil.isEmpty(list)) {
 			return;
 		}
-		create(ts).addAll(list);
+		create(t).addAll(list);
 	}
 
 	void merge(LogicalContext another) {
@@ -53,9 +53,9 @@ class LogicalContext {
 
 		list = new ArrayList<>();
 		if (ts) {
-			this.ts = list;
+			this.tlist = list;
 		} else {
-			this.fs = list;
+			this.flist = list;
 		}
 		return list;
 	}

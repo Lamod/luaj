@@ -103,14 +103,12 @@ public class Translator {
 	}
 
 	private void translateStat(Stat stat) {
-		if (stat instanceof LocalStat) {
+		if (stat instanceof IfStat) {
+			translateIfStat((IfStat)stat);
+		} else if (stat instanceof LocalStat) {
 			translateLocalStat((LocalStat)stat);
 		} else if (stat instanceof BlockStat) {
-			openScope();
-			for (Stat s : ((BlockStat)stat).getBlock().getStatements()) {
-				translateStat(s);
-			}
-			closeScope();
+			block(((BlockStat)stat).getBlock());
 		} else if (stat instanceof FuncStat) {
 			translateFuncStat((FuncStat)stat);
 		} else if (stat instanceof FuncCallStat) {
@@ -125,6 +123,44 @@ public class Translator {
 		} else if (stat instanceof AssignStat) {
 			translateAssignStat((AssignStat)stat);
 		}
+	}
+
+	private void translateIfStat(IfStat stat) {
+		ArrayList<Integer> elseList = null, endList = new ArrayList<>();
+		boolean first = true;
+		for (IfStat.Branch branch : stat.getBranchList()) {
+			if (!first) {
+				instruction(new Instruction(OpCode.JMP, 0, Instruction.NO_JUMP));
+				endList.add(pc() - 1);
+				patchToHere(elseList);
+			} else {
+				first = false;
+			}
+			if (branch.isElseBranch()) {
+				block(branch.getBlock());
+			} else {
+				elseList = testThenBlock(branch.getCondition(), branch.getBlock());
+			}
+		}
+
+		patchToHere(endList);
+		patchToHere(elseList);
+	}
+
+	private ArrayList<Integer> testThenBlock(Expr cond, Block block) {
+		LogicalContext ctx = logicalLeftOperand(cond, true);
+		patchToHere(ctx.tlist);
+		block(block);
+
+		return ctx.flist;
+	}
+
+	private void block(Block block) {
+		openScope();
+		for (Stat s : block.getStatements()) {
+			translateStat(s);
+		}
+		closeScope();
 	}
 
 	private void translateLocalStat(LocalStat stat) {
@@ -366,22 +402,24 @@ public class Translator {
 	}
 
 	private int closeLogicalContext(LogicalContext ctx, int alloc) {
-		int pc, pf = Instruction.NO_JUMP, pt = Instruction.NO_JUMP, reg = ctx.reg;
-		if (ctx.needValue) {
-			if (reg == Instruction.NO_REG) {
-				reg = requestReg(alloc);
+		int pc, pf = Instruction.NO_JUMP, pt = Instruction.NO_JUMP;
+		if (alloc == RA_NONE) {
+			pc = pc();
+			ctx.reg = Instruction.NO_REG;
+		} else if (ctx.needValue) {
+			if (ctx.reg == Instruction.NO_REG) {
+				ctx.reg = requestReg(alloc);
 			}
-			pt = compValue(reg);
+			pt = compValue(ctx.reg);
 			pc = pt + 1;
 			pf = pt - 1;
 		} else {
 			pc = pc();
 		}
-		patchList(ctx.fs, pc, pf, reg);
-		patchList(ctx.ts, pc, pt, reg);
+		patchList(ctx.flist, pc, pf, ctx.reg);
+		patchList(ctx.tlist, pc, pt, ctx.reg);
 
-		ctx.reg = reg;
-		return reg;
+		return ctx.reg;
 	}
 
 	private LogicalContext logicalLeftOperand(Expr expr, boolean goIfTrue) {
