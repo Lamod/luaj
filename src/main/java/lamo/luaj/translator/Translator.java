@@ -3,6 +3,7 @@ package lamo.luaj.translator;
 import lamo.luaj.*;
 import lamo.luaj.parser.ast.*;
 import lamo.luaj.util.ArrayUtil;
+import lamo.luaj.util.BoolUtil;
 import lamo.luaj.vm.Instruction;
 import lamo.luaj.vm.OpCode;
 import lamo.luaj.vm.Proto;
@@ -450,9 +451,9 @@ public class Translator {
 			int not = pc() - 1;
 			int a = getCode().get(not).getB();
 			getCode().remove(not);
-			jmp = condJump(OpCode.TEST, a, 0, goIfTrue ? 1 : 0);
+			jmp = condJump(OpCode.TEST, a, 0, BoolUtil.toInt(goIfTrue));
 		} else {
-			jmp = condJump(OpCode.TESTSET, Instruction.NO_REG, reg, goIfTrue ? 0 : 1);
+			jmp = condJump(OpCode.TESTSET, Instruction.NO_REG, reg, BoolUtil.invert(goIfTrue));
 		}
 		ctx.add(jmp, !goIfTrue);
 
@@ -940,7 +941,7 @@ public class Translator {
 	}
 
 	private void loadBoolean(boolean v, int reg){
-		instruction(new Instruction(OpCode.LOADBOOL, reg, v ? 1 : 0, 0));
+		instruction(new Instruction(OpCode.LOADBOOL, reg, BoolUtil.toInt(v), 0));
 	}
 
 	private void loadK(int i, int reg) {
