@@ -42,8 +42,8 @@ public class Instruction {
 		return (segment & ~BIT_RK) > 0;
 	}
 
-	static public int setAsK(int instruction) {
-		return instruction | BIT_RK;
+	static public int asK(int v) {
+		return v | BIT_RK;
 	}
 
 	private int value;
@@ -127,10 +127,41 @@ public class Instruction {
 
 	public String toString() {
 		OpCode op = getOpCode();
-		if (op.getOpMode() == OpCode.OpMode.iABC) {
-			return op.toString() + " " + getA() + " " + getB() + " " + getC();
-		} else {
-			return op.toString() + " " + getA() + " " + getBx();
+		StringBuilder sb = new StringBuilder();
+		sb.append(op.toString());
+		sb.append(" ");
+		sb.append(getA());
+		sb.append(" ");
+
+		switch (op.getOpMode()) {
+			case iABC:
+				if (formatArg(sb, getB(), op.getBMode())) {
+					sb.append(" ");
+				}
+				formatArg(sb, getC(), op.getCMode());
+				break;
+			case iABx:
+				sb.append(getBx());
+				break;
+			case iAsBx:
+				sb.append(getsBx());
+				break;
+		}
+
+		return sb.toString();
+	}
+
+	private boolean formatArg(StringBuilder sb, int v, OpCode.ArgMode mode) {
+		switch (mode) {
+			case K:
+				if (isK(v)) {
+					v = -((v & ~BIT_RK) + 1);
+				}
+			case U:case R:
+				sb.append(v);
+				return true;
+			default:
+				return false;
 		}
 	}
 

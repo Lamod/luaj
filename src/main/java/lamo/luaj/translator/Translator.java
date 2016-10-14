@@ -732,7 +732,7 @@ public class Translator {
 	private int translateLValue(LValue v, int alloc) {
 		int i = addK(v);
 		if (alloc <= RA_RK) {
-			return Instruction.setAsK(i);
+			return Instruction.asK(i);
 		}
 
 		int reg = requestReg(alloc);
