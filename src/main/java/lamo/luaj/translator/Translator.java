@@ -92,7 +92,11 @@ public class Translator {
 	}
 
 	private void translateStat(Stat stat) {
-		if (stat instanceof IfStat) {
+		if (stat instanceof BreakStat) {
+			translateBreakStat();
+		} else if (stat instanceof RepeatStat) {
+			translateRepeatStat((RepeatStat)stat);
+		} else if (stat instanceof IfStat) {
 			translateIfStat((IfStat)stat);
 		} else if (stat instanceof WhileStat) {
 			translateWhileStat((WhileStat)stat);
@@ -114,6 +118,46 @@ public class Translator {
 		} else if (stat instanceof AssignStat) {
 			translateAssignStat((AssignStat)stat);
 		}
+	}
+
+	private void translateBreakStat() {
+		Scope scope;
+		boolean hasUpvalue = false;
+		for (int i = this.scopes.size() - 1; i >= 0; --i) {
+			scope = this.scopes.get(i);
+			hasUpvalue = hasUpvalue || scope.hasUpvalue;
+
+			if (scope.breakable) {
+				if (hasUpvalue) {
+					instruction(new Instruction(OpCode.CLOSE, scope.startOfActVar, 0, 0));
+				}
+				scope.addBreakPoint(jump());
+				return;
+			}
+		}
+
+		assert false; // no loop to break
+	}
+
+	private void translateRepeatStat(RepeatStat stat) {
+		int init = pc();
+
+		openScope(true);
+		Scope scope = openScope(false);
+
+		statements(stat.getBlock().getStatements());
+		ArrayList<Integer> endList = logicalLeftOperand(stat.getCondition(), true).flist;
+		if (!scope.hasUpvalue) {
+			closeScope();
+			patchList(endList, init, init, Instruction.NO_REG);
+		} else {
+			translateBreakStat();
+			patchToHere(endList);
+			closeScope();
+			patchJump(jump(), init, init, Instruction.NO_REG);
+		}
+
+		closeScope();
 	}
 
 	private void translateWhileStat(WhileStat stat) {
@@ -743,10 +787,12 @@ public class Translator {
 		return reg;
 	}
 
-	private void openScope(boolean breakable) {
+	private Scope openScope(boolean breakable) {
 		Scope scope = new Scope(breakable);
 		scope.startOfActVar = this.actVars.size();
 		this.scopes.push(scope);
+
+		return scope;
 	}
 
 	private void closeScope() {
@@ -756,11 +802,16 @@ public class Translator {
 		for (int i = n; i < this.actVars.size(); ++i) {
 			this.localVars.get(this.actVars.get(i)).endPC = pc;
 		}
+
 		if (scope.hasUpvalue) {
 			instruction(new Instruction(OpCode.CLOSE, n, 0, 0));
 		}
+
 		int s = this.actVars.size();
 		this.actVars.subList(s - n, s).clear();
+
+		patchToHere(scope.breakList);
+
 		this.scopes.pop();
 	}
 
