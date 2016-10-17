@@ -8,10 +8,7 @@ import lamo.luaj.vm.Instruction;
 import lamo.luaj.vm.OpCode;
 import lamo.luaj.vm.Proto;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class Translator {
 
@@ -34,7 +31,7 @@ public class Translator {
 	private ArrayList<LValue> ks = new ArrayList<>();
 	private int freeReg;
 
-	private LinkedList<Scope> scopes = new LinkedList<>();
+	private Stack<Scope> scopes = new Stack<>();
 	private ArrayList<Proto> ps = new ArrayList<>();
 
 	public Translator(Chunk chunk) {
@@ -70,16 +67,8 @@ public class Translator {
 			return this.proto;
 		}
 
-		openScope();
-		Stat[] stats = this.chunk.getStatements();
-		if (!ArrayUtil.isEmpty(stats)) {
-			for (Stat stat : this.chunk.getStatements()) {
-				translateStat(stat);
-				this.freeReg = this.actVars.size();
-			}
-		}
+		statements(this.chunk.getStatements());
 		ret(0, 0);
-		closeScope();
 
 		ArrayList<Instruction> code = getCode();
 		Instruction[] is = code.toArray(new Instruction[code.size()]);
@@ -164,11 +153,18 @@ public class Translator {
 	}
 
 	private void block(Block block) {
-		openScope();
-		for (Stat s : block.getStatements()) {
-			translateStat(s);
-		}
+		openScope(false);
+
+		statements(block.getStatements());
+
 		closeScope();
+	}
+
+	private void statements(Stat[] stats) {
+		for (Stat s : stats) {
+			translateStat(s);
+			this.freeReg = this.actVars.size();
+		}
 	}
 
 	private void translateLocalStat(LocalStat stat) {
@@ -673,15 +669,13 @@ public class Translator {
 				}
 				break;
 			case VarInfo.UPVALUE: {
-				UpValue uv = this.upvalues.get(info.index);
 				reg = requestReg(alloc);
-				instruction(new Instruction(OpCode.GETUPVALUE, reg, uv.index, 0));
+				instruction(new Instruction(OpCode.GETUPVALUE, reg, info.index, 0));
 				break;
 			}
 			case VarInfo.GLOBAL: {
-				int idx = addKString(var.getName());
 				reg = requestReg(alloc);
-				instruction(new Instruction(OpCode.GETGLOBAL, reg, idx));
+				instruction(new Instruction(OpCode.GETGLOBAL, reg, info.index));
 				break;
 			}
 			default:
@@ -749,31 +743,37 @@ public class Translator {
 		return reg;
 	}
 
-	private void openScope() {
-		this.scopes.add(new Scope());
+	private void openScope(boolean breakable) {
+		Scope scope = new Scope(breakable);
+		scope.startOfActVar = this.actVars.size();
+		this.scopes.push(scope);
 	}
 
 	private void closeScope() {
+		Scope scope = getLastScope();
 		int pc = getCode().size();
-		int n = getLastScope().numOfLocVar;
-		for (int i = 1; i <= n; ++i) {
-			this.localVars.get(this.localVars.size() - i).endPC = pc;
+		int n = scope.startOfActVar;
+		for (int i = n; i < this.actVars.size(); ++i) {
+			this.localVars.get(this.actVars.get(i)).endPC = pc;
+		}
+		if (scope.hasUpvalue) {
+			instruction(new Instruction(OpCode.CLOSE, n, 0, 0));
 		}
 		int s = this.actVars.size();
 		this.actVars.subList(s - n, s).clear();
-		this.scopes.removeLast();
+		this.scopes.pop();
 	}
 
 	private Scope getLastScope() {
-		return this.scopes.getLast();
+		return this.scopes.peek();
 	}
 
 	private int addLocalVar(String name) {
 		LocVar var = new LocVar(name);
-		var.startPC = getCode().size();
+		var.startPC = pc();
 		this.localVars.add(var);
 		this.actVars.add(this.localVars.size() - 1);
-		return getLastScope().numOfLocVar++;
+		return this.actVars.size() - 1;
 	}
 
 	private int findLocalVar(String name) {
@@ -785,8 +785,8 @@ public class Translator {
 		return -1;
 	}
 
-	private int addUpValue(String name, int idx, boolean inSameChunk) {
-		int index = findUpValue(name);
+	private int addUpvalue(String name, int idx, boolean inSameChunk) {
+		int index = findUpvalue(name, idx, inSameChunk);
 		if (index >= 0) {
 			return index;
 		}
@@ -799,13 +799,60 @@ public class Translator {
 		return this.upvalues.size() - 1;
 	}
 
-	private int findUpValue(String name) {
+	private int findUpvalue(String name, int idx, boolean inSameChunk) {
 		for (int i = 0; i < this.upvalues.size(); ++i) {
-			if (this.upvalues.get(i).name.equals(name)) {
+			UpValue uv = this.upvalues.get(i);
+			if (uv.inSameLevel == inSameChunk && uv.index == idx) {
+				assert uv.name.equals(name);
 				return i;
 			}
 		}
 		return -1;
+	}
+
+	private VarInfo singleVar(String name) {
+		VarInfo info = VarInfo.singleton;
+		if ((info.index = this.findLocalVar(name)) >= 0) {
+			info.type = VarInfo.LOCAL;
+			return info;
+		}
+
+		Stack<Translator> ts = new Stack<>();
+		ts.add(this);
+		for (Translator t = getParent(); t != null; t = t.getParent()) {
+			info.index = t.findLocalVar(name);
+			if (info.index >= 0) {
+				t.markUpvalue(info.index);
+
+				info.type = VarInfo.UPVALUE;
+				info.index = indexUpvalue(ts, name, info.index);
+				return info;
+			}
+			ts.add(t);
+		}
+
+		info.type = VarInfo.GLOBAL;
+		info.index = addKString(name);
+		return info;
+	}
+
+	private int indexUpvalue(Stack<Translator> ts, String name, int idx) {
+		for (int i = 0; i < ts.size(); ++i) {
+			idx = ts.get(i).addUpvalue(name, idx, i == 0);
+		}
+
+		return idx;
+	}
+
+	private void markUpvalue(int index) {
+		Scope scope;
+		for (int i = this.scopes.size() - 1; i >= 0; --i) {
+			scope = this.scopes.get(i);
+			if (scope.startOfActVar <= index) {
+				scope.hasUpvalue = true;
+				break;
+			}
+		}
 	}
 
 	private void patchToHere(List<Integer> js) {
@@ -894,42 +941,6 @@ public class Translator {
 		return this.ks.lastIndexOf(v);
 	}
 
-	private VarInfo singleVar(String name) {
-		VarInfo info = VarInfo.singleton;
-		info.type = VarInfo.GLOBAL;
-		ArrayList<Translator> ts = new ArrayList<>();
-		Translator t = this, last = null;
-		do {
-			info.index = t.findLocalVar(name);
-			if (info.index >= 0) {
-				if (this == t) {
-					info.type = VarInfo.LOCAL;
-				} else {
-					info.type = VarInfo.UPVALUE;
-					int idx = 0;
-					for (Translator tr : ts) {
-						if (tr == last) {
-							idx = tr.addUpValue(name, info.index, true);
-						} else {
-							idx = tr.addUpValue(name, idx, false);
-						}
-						if (tr == this) {
-							info.index = idx;
-						}
-					}
-				}
-				return info;
-			} else if (this == t && (info.index = t.findUpValue(name)) >= 0) {
-				info.type = VarInfo.UPVALUE;
-				return info;
-			}
-			last = t;
-			ts.add(t);
-		} while ((t = t.getParent()) != null);
-
-		info.index = addKString(name);
-		return info;
-	}
 
 	private void storeVar(AssignVarInfo info, int reg) {
 		if (info.type == AssignVarInfo.LOCAL) {

@@ -60,6 +60,10 @@ public class Proto {
 				sb.append("\n");
 			}
 		}
+		for (Proto p : this.ps) {
+			sb.append("\n");
+			sb.append(p.toString());
+		}
 
 		return sb.toString();
 	}

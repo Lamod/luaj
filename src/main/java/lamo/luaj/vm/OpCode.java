@@ -50,7 +50,7 @@ public enum OpCode {
 	TFORLOOP(OpMode.iABC, true, false, ArgMode.N, ArgMode.U),
 
 	SETLIST(OpMode.iABC, false, false, ArgMode.U, ArgMode.U),
-	CLOSE(OpMode.iABC, false, false, ArgMode.U, ArgMode.N),
+	CLOSE(OpMode.iABC, false, false, ArgMode.N, ArgMode.N),
 	CLOSURE(OpMode.iABx, false, true, ArgMode.U, ArgMode.N),
 	VARARG(OpMode.iABC, false, true, ArgMode.U, ArgMode.N),
 	;
