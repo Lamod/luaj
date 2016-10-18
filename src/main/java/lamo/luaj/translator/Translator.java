@@ -214,10 +214,19 @@ public class Translator {
 	private void translateLocalStat(LocalStat stat) {
 		String[] names = stat.getNames();
 		Expr[] es = stat.getExprs();
+
+		if (stat.isAccessable()) {
+			for (String n : names) {
+				addLocalVar(n);
+			}
+		}
+
 		translateAssignValues(es, names.length);
 
-		for (String n : names) {
-			addLocalVar(n);
+		if (!stat.isAccessable()) {
+			for (String n : names) {
+				addLocalVar(n);
+			}
 		}
 	}
 

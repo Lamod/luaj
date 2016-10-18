@@ -173,6 +173,7 @@ public class Parser implements Closeable {
 					FuncExpr func = new FuncExpr(parseFuncBody());
 
 					LocalStat ls = new LocalStat();
+					ls.setAccessable(true);
 					ls.setNames(new String[]{ name });
 					ls.setExprs(new Expr[]{ func });
 					stat = ls;
