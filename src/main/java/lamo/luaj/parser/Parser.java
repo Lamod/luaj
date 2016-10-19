@@ -28,30 +28,30 @@ public class Parser implements Closeable {
 	}
 
 	public Chunk parse() throws ParserException {
-		return parseChunk();
+		return chunk();
 	}
 
-	private Chunk parseChunk(TType... terminators) throws ParserException {
+	private Chunk chunk(TType... terminators) throws ParserException {
 		Chunk chunk = new Chunk();
 		enterBlock(chunk);
 
-        chunk.setStatements(parseStats(terminators));
+        chunk.setStatements(stats(terminators));
 
 		leaveBlock();
 		return chunk;
 	}
 
-	private Block parseBlock(TType... terminators) throws ParserException {
+	private Block block(TType... terminators) throws ParserException {
 		Block block = new Block();
 		enterBlock(block);
 
-        block.setStatements(parseStats(terminators));
+        block.setStatements(stats(terminators));
 
 		leaveBlock();
 		return block;
 	}
 
-	private Stat[] parseStats(TType... terminators) throws ParserException {
+	private Stat[] stats(TType... terminators) throws ParserException {
 		ArrayList<Stat> statList = new ArrayList<>();
         Stat stat = null;
 
@@ -59,7 +59,7 @@ public class Parser implements Closeable {
             if (terminators != null && ArrayUtil.contains(terminators, current.getType())) {
                 break;
             }
-            stat = parseStat(terminators);
+            stat = stat(terminators);
             statList.add(stat);
             tryMatch(TType.SEMICOLON);
             if (stat instanceof LastStat) {
@@ -70,7 +70,7 @@ public class Parser implements Closeable {
 		return statList.size() > 0 ? statList.toArray(new Stat[statList.size()]) : null;
 	}
 
-	private Stat parseStat(TType... terminators) throws ParserException {
+	private Stat stat(TType... terminators) throws ParserException {
 		Stat stat = null;
 		switch (current.getType()) {
             case BREAK:
@@ -82,52 +82,52 @@ public class Parser implements Closeable {
                 ReturnStat rs = new ReturnStat();
                 if (!ArrayUtil.contains(terminators, current.getType())
                         && current.getType() != TType.SEMICOLON) {
-                    rs.setExprs(parseExprs());
+                    rs.setExprs(exprs());
                 }
                 stat = rs;
                 break;
             }
 			case DO: {
 				consume();
-				stat = new BlockStat(parseBlock(TType.END));
+				stat = new BlockStat(block(TType.END));
 				match(TType.END);
 				break;
 			}
 			case WHILE: {
 				consume();
-				Expr c = parseExpr();
+				Expr c = expr();
 				match(TType.DO);
-				Block b= parseBlock(TType.END);
+				Block b= block(TType.END);
 				match(TType.END);
 				stat = new WhileStat(c, b);
 				break;
 			}
 			case REPEAT: {
 				consume();
-				Block b = parseBlock(TType.UNTIL);
+				Block b = block(TType.UNTIL);
 				match(TType.UNTIL);
-				Expr c = parseExpr();
+				Expr c = expr();
 				stat = new RepeatStat(c, b);
 				break;
 			}
 			case IF: {
 				consume();
-				Expr c = parseExpr();
+				Expr c = expr();
 				match(TType.THEN);
-				Block b = parseBlock(TType.ELSE, TType.ELSEIF, TType.END);
+				Block b = block(TType.ELSE, TType.ELSEIF, TType.END);
 				
 				IfStat s = new IfStat();
 				s.append(c, b);
 
 				while (tryMatch(TType.ELSEIF) != null) {
-					c = parseExpr();
+					c = expr();
 					match(TType.THEN);
-					b = parseBlock(TType.ELSE, TType.ELSEIF, TType.END);
+					b = block(TType.ELSE, TType.ELSEIF, TType.END);
 					s.append(c, b);
 				}
 
 				if (tryMatch(TType.ELSE) != null) {
-					s.append(null, parseBlock(TType.END));
+					s.append(null, block(TType.END));
 				}
 				
 				match(TType.END);
@@ -140,37 +140,37 @@ public class Parser implements Closeable {
 					String n = consume().getText();
 					consume(); // '='
 					Expr init, limit, step;
-					init = parseExpr();
+					init = expr();
 					match(TType.COMMA);
-					limit = parseExpr();
+					limit = expr();
 					if (tryMatch(TType.COMMA) != null) {
-						step = parseExpr();
+						step = expr();
 					} else {
 						step = null;
 					}
 					match(TType.DO);
-					Block b = parseBlock(TType.END);
+					Block b = block(TType.END);
 					match(TType.END);
 					stat = new NumbericForStat(n, init, limit, step, b);
 				} else {
-					String[] nl = parseNames();
+					String[] nl = names();
                     match(TType.IN);
-					Expr[] el = parseExprs();
+					Expr[] el = exprs();
 					match(TType.DO);
-					Block b = parseBlock(TType.END);
+					Block b = block(TType.END);
 					match(TType.END);
 					stat = new GenericForStat(nl, el, b);
 				}
 				break;
 			case FUNCTION:
-				stat = parseFuncStat();
+				stat = funcStat();
 				break;
 			case LOCAL:
 				if (testLookahead(TType.FUNCTION)) {
 					consume(); // 'local'
 					consume(); // 'function'
 					String name = match(TType.NAME).getText();
-					FuncExpr func = new FuncExpr(parseFuncBody());
+					FuncExpr func = new FuncExpr(funcBody());
 
 					LocalStat ls = new LocalStat();
 					ls.setAccessable(true);
@@ -178,18 +178,18 @@ public class Parser implements Closeable {
 					ls.setExprs(new Expr[]{ func });
 					stat = ls;
 				} else {
-					stat = parseLocalStat();
+					stat = localStat();
 				}
 				break;
 			default:
-				stat = parseExprStat();
+				stat = exprStat();
 		}
 
 		stat.setOwner(this.currentBlock);
 		return stat;
 	}
 
-	private FuncStat parseFuncStat() throws ParserException {
+	private FuncStat funcStat() throws ParserException {
 		match(TType.FUNCTION);
 
 		FuncStat stat = new FuncStat();
@@ -208,7 +208,7 @@ public class Parser implements Closeable {
 		}
 
 		stat.getName().setFields(segments.toArray(new String[segments.size()]));
-		stat.setBody(parseFuncBody());
+		stat.setBody(funcBody());
 		if (needSelf) {
 			stat.getBody().setNeedSelf(true);
 		}
@@ -216,37 +216,37 @@ public class Parser implements Closeable {
 		return stat;
 	}
 
-	private LocalStat parseLocalStat() throws ParserException {
+	private LocalStat localStat() throws ParserException {
 		match(TType.LOCAL);
 
 		LocalStat stat = new LocalStat();
-		stat.setNames(parseNames());
+		stat.setNames(names());
 
 		if (tryMatch(TType.ASSIGN) == null) {
 			return stat;
 		}
 
-		stat.setExprs(parseExprs());
+		stat.setExprs(exprs());
 
 		return stat;
 	}
 
-	private Stat parseExprStat() throws ParserException {
-		PrimaryExpr expr = parsePrimaryExpr();
+	private Stat exprStat() throws ParserException {
+		PrimaryExpr expr = primaryExpr();
 		if (expr.isFuncCallExpr()) {
 			return new FuncCallStat(expr);
 		} else {
-			return parseAssignStat(expr);
+			return assignStat(expr);
 		}
 	}
 
-	private AssignStat parseAssignStat(PrimaryExpr var) throws ParserException {
+	private AssignStat assignStat(PrimaryExpr var) throws ParserException {
 		AssignStat stat = new AssignStat();
 
 		ArrayList<PrimaryExpr> varList = new ArrayList<>();
 		varList.add(var);
 		while (tryMatch(TType.COMMA) != null) {
-			var = parsePrimaryExpr();
+			var = primaryExpr();
 			if (!var.isAssignable()) {
 				throw new ParserException();
 			}
@@ -255,32 +255,32 @@ public class Parser implements Closeable {
 		stat.setVariables(varList.toArray(new PrimaryExpr[varList.size()]));
 
 		match(TType.ASSIGN);
-		stat.setValues(parseExprs());
+		stat.setValues(exprs());
 
 		return stat;
 	}
 
-	private FuncBody parseFuncBody() throws ParserException {
+	private FuncBody funcBody() throws ParserException {
 		match(TType.LPARENT);
 
 		FuncBody body = new FuncBody();
 
 		if (tryMatch(TType.RPARENT) == null) {
-			body.setParlist(parseParlist());
+			body.setParlist(parlist());
 			match(TType.RPARENT);
 		}
 
-		body.setChunk(parseChunk(TType.END));
+		body.setChunk(chunk(TType.END));
 		match(TType.END);
 
 		return body;
 	}
 
-	private FuncBody.Parlist parseParlist() throws ParserException {
+	private FuncBody.Parlist parlist() throws ParserException {
 		if (testCurrent(TType.DOTS) || testCurrent(TType.NAME)) {
 			FuncBody.Parlist parlist = new FuncBody.Parlist();
 			if (testCurrent(TType.NAME)) {
-				parlist.setParams(parseNames());
+				parlist.setParams(names());
 			}
 			if (tryMatch(TType.DOTS) != null) {
 				parlist.setVararg(true);
@@ -292,7 +292,7 @@ public class Parser implements Closeable {
 		}
 	}
 
-	private String[] parseNames() throws ParserException {
+	private String[] names() throws ParserException {
 		ArrayList<String> names = new ArrayList<>();
 
 		do {
@@ -302,45 +302,45 @@ public class Parser implements Closeable {
 		return names.toArray(new String[names.size()]);
 	}
 
-	private Expr[] parseExprs() throws ParserException {
+	private Expr[] exprs() throws ParserException {
 		ArrayList<Expr> exps = new ArrayList<>();
 
 		do {
-			exps.add(parseExpr());
+			exps.add(expr());
 		} while(tryMatch(TType.COMMA) != null);
 
 		return exps.toArray(new Expr[exps.size()]);
 	}
 
-	private Expr parseExpr() throws ParserException {
-		return parseSubexpr(0);
+	private Expr expr() throws ParserException {
+		return subexpr(0);
 	}	
 
-	private Expr parseSubexpr(int limit) throws ParserException {
+	private Expr subexpr(int limit) throws ParserException {
 		Expr expr = null;
 		UnaryExpr.Operator uop = UnaryExpr.getOperator(current);
 		if (uop != null) {
 			consume();
-			Expr operand = parseSubexpr(UnaryExpr.OP_PRIORITY);
+			Expr operand = subexpr(UnaryExpr.OP_PRIORITY);
 			UnaryExpr uexpr = new UnaryExpr();
 			uexpr.setOperator(uop);
 			uexpr.setOperand(operand);
 			expr = uexpr;
 		} else {
-			expr = parseSimpleExpr();
+			expr = simpleExpr();
 		}
 
 		BinaryExpr.Operator bop = BinaryExpr.getOperator(current);
 		while (bop != null && bop.getLeftPriority() > limit) {
 			consume();
-			expr = new BinaryExpr(expr, bop, parseSubexpr(bop.getRightPriority()));
+			expr = new BinaryExpr(expr, bop, subexpr(bop.getRightPriority()));
 			bop = BinaryExpr.getOperator(current);
 		}
 
 		return expr;
 	}
 
-	private Expr parseSimpleExpr() throws ParserException {
+	private Expr simpleExpr() throws ParserException {
 		switch(current.getType()) {
 			case NIL:
 				consume();
@@ -360,21 +360,21 @@ public class Parser implements Closeable {
 				return new VarargExpr();
 			case FUNCTION:
 				consume();
-				return new FuncExpr(parseFuncBody());
+				return new FuncExpr(funcBody());
 			case LBRACE:
-				return parseTableConstructor();
+				return tableConstructor();
 			default:
-				return parsePrimaryExpr();
+				return primaryExpr();
 		}
 	}
 
-	private PrimaryExpr parsePrimaryExpr() throws ParserException {
+	private PrimaryExpr primaryExpr() throws ParserException {
 		Expr prefix = null;
 		if (testCurrent(TType.NAME)) {
 			prefix = new Var(consume().getText());
 		} else if (testCurrent(TType.LPARENT)) {
 			consume();
-			prefix = parseExpr();
+			prefix = expr();
 			if (prefix instanceof BinaryExpr) {
 				((BinaryExpr)prefix).setClosed(true);
 			}
@@ -398,7 +398,7 @@ public class Parser implements Closeable {
 				case LBRACKET: {
 					consume();
 					PrimaryExpr.FieldSegment seg = new PrimaryExpr.FieldSegment();
-					seg.setKey(parseExpr());
+					seg.setKey(expr());
 					match(TType.RBRACKET);
 					segmentList.add(seg);
 
@@ -408,14 +408,14 @@ public class Parser implements Closeable {
 					consume();
 					PrimaryExpr.MethodSegment seg = new PrimaryExpr.MethodSegment();
 					seg.setName(match(TType.NAME).getText());
-					seg.setArgs(parseFuncArgs());
+					seg.setArgs(funcArgs());
 					segmentList.add(seg);
 
 					break;
 				}
 				case LPARENT: case LBRACE: case STRING: {
 					PrimaryExpr.ArgsSegment seg = new PrimaryExpr.ArgsSegment();
-					seg.setArgs(parseFuncArgs());
+					seg.setArgs(funcArgs());
 					segmentList.add(seg);
 
 					break;
@@ -434,20 +434,20 @@ public class Parser implements Closeable {
 		return primaryExpr;
 	}
 
-	private Expr[] parseFuncArgs() throws ParserException {
+	private Expr[] funcArgs() throws ParserException {
 		switch (current.getType()) {
 			case LPARENT: {
 				consume();
 				Expr[] args = null;
 				if (tryMatch(TType.RPARENT) == null) {
-					args = parseExprs();
+					args = exprs();
 					match(TType.RPARENT);
 				}
 
 				return args;
 			}
 			case LBRACE:
-				return new Expr[] { parseTableConstructor() };
+				return new Expr[] { tableConstructor() };
 			case STRING:
 				return new Expr[] { new LiteralString(consume().getText()) };
 			default:
@@ -455,30 +455,30 @@ public class Parser implements Closeable {
 		}
 	}
 
-	private TableConstructorExpr parseTableConstructor() throws ParserException {
+	private TableConstructorExpr tableConstructor() throws ParserException {
 		match(TType.LBRACE);
 
 		TableConstructorExpr constructor = new TableConstructorExpr();
 
 		if (tryMatch(TType.RBRACE) == null) {
-			constructor.setFields(parseFields());
+			constructor.setFields(fields());
 			match(TType.RBRACE);
 		}
 
 		return constructor;
 	}
 
-	private TableConstructorExpr.Field[] parseFields() throws ParserException {
+	private TableConstructorExpr.Field[] fields() throws ParserException {
 		ArrayList<TableConstructorExpr.Field> fields = new ArrayList<>();
 
 		do {
 			switch(current.getType()) {
 				case LBRACKET: {
 					consume();
-					Expr key = parseExpr();
+					Expr key = expr();
 					match(TType.RBRACKET);
 					match(TType.ASSIGN);
-					Expr value = parseExpr();
+					Expr value = expr();
 
 					fields.add(new TableConstructorExpr.RecField(key, value));
 
@@ -488,7 +488,7 @@ public class Parser implements Closeable {
 					if (testLookahead(TType.ASSIGN)) {
 						LiteralString key = new LiteralString(consume().getText());
 						match(TType.ASSIGN);
-						Expr value = parseExpr();
+						Expr value = expr();
 
 						fields.add(new TableConstructorExpr.RecField(key, value));
 
@@ -498,7 +498,7 @@ public class Parser implements Closeable {
 					}
 				}
 				default: {
-					fields.add(new TableConstructorExpr.ListField(parseExpr()));
+					fields.add(new TableConstructorExpr.ListField(expr()));
 					break;
 				}
 			}

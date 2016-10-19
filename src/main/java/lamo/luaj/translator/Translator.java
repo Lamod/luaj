@@ -91,40 +91,40 @@ public class Translator {
 		return this.proto.toString();
 	}
 
-	private void translateStat(Stat stat) {
+	private void stat(Stat stat) {
 		if (stat instanceof BreakStat) {
-			translateBreakStat();
+			breakStat();
 		} else if (stat instanceof RepeatStat) {
-			translateRepeatStat((RepeatStat)stat);
+			repeatStat((RepeatStat)stat);
 		} else if (stat instanceof IfStat) {
-			translateIfStat((IfStat)stat);
+			ifStat((IfStat)stat);
 		} else if (stat instanceof WhileStat) {
-			translateWhileStat((WhileStat) stat);
+			whileStat((WhileStat) stat);
 		} else if (stat instanceof NumbericForStat) {
-			translateNumbericForStat((NumbericForStat)stat);
+			numbericForStat((NumbericForStat)stat);
 		} else if (stat instanceof GenericForStat) {
-			translateGenericForStat((GenericForStat)stat);
+			genericForStat((GenericForStat)stat);
 		} else if (stat instanceof LocalStat) {
-			translateLocalStat((LocalStat)stat);
+			localStat((LocalStat)stat);
 		} else if (stat instanceof BlockStat) {
 			block(((BlockStat)stat).getBlock());
 		} else if (stat instanceof FuncStat) {
-			translateFuncStat((FuncStat)stat);
+			funcStat((FuncStat)stat);
 		} else if (stat instanceof FuncCallStat) {
 			PrimaryExpr pe = ((FuncCallStat)stat).getExpr();
-			translatePrimaryExpr(pe, RA_ANY);
+			primaryExpr(pe, RA_ANY);
 			if (pe.isFuncCallExpr()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
 				setReturns(last, 0);
 			}
 		} else if (stat instanceof ReturnStat) {
-			translateReturnStat((ReturnStat)stat);
+			returnStat((ReturnStat)stat);
 		} else if (stat instanceof AssignStat) {
-			translateAssignStat((AssignStat)stat);
+			assignStat((AssignStat)stat);
 		}
 	}
 
-	private void translateBreakStat() {
+	private void breakStat() {
 		Scope scope;
 		boolean hasUpvalue = false;
 		for (int i = this.scopes.size() - 1; i >= 0; --i) {
@@ -143,7 +143,7 @@ public class Translator {
 		assert false; // no loop to break
 	}
 
-	private void translateRepeatStat(RepeatStat stat) {
+	private void repeatStat(RepeatStat stat) {
 		int init = pc();
 
 		openScope(true);
@@ -155,7 +155,7 @@ public class Translator {
 			closeScope();
 			patchList(endList, init);
 		} else {
-			translateBreakStat();
+			breakStat();
 			patchToHere(endList);
 			closeScope();
 			patchJump(jump(), init);
@@ -164,7 +164,7 @@ public class Translator {
 		closeScope();
 	}
 
-	private void translateWhileStat(WhileStat stat) {
+	private void whileStat(WhileStat stat) {
 		int init = pc();
 		LogicalContext ctx = logicalLeftOperand(stat.getCondition(), true);
 
@@ -177,14 +177,14 @@ public class Translator {
 		closeScope();
 	}
 
-	private void translateNumbericForStat(NumbericForStat stat) {
+	private void numbericForStat(NumbericForStat stat) {
 		openScope(true);
 		int base = this.freeReg;
 
-		translateExpr(stat.getInitExpr(), RA_NEXT);
-		translateExpr(stat.getLimitExpr(), RA_NEXT);
+		expr(stat.getInitExpr(), RA_NEXT);
+		expr(stat.getLimitExpr(), RA_NEXT);
 		if (stat.getStepExpr() != null) {
-			translateExpr(stat.getStepExpr(), RA_NEXT);
+			expr(stat.getStepExpr(), RA_NEXT);
 		} else {
 			loadK(addKNumber(1), reserveReg(1));
 		}
@@ -208,11 +208,11 @@ public class Translator {
 		closeScope();
 	}
 
-	private void translateGenericForStat(GenericForStat stat) {
+	private void genericForStat(GenericForStat stat) {
 		openScope(true);
 		int base = this.freeReg;
 
-		translateAssignValues(stat.getExprs(), 3);
+		assignValues(stat.getExprs(), 3);
 		addLocalVar("(for generator");
 		addLocalVar("(for state)");
 		addLocalVar("(for control");
@@ -234,7 +234,7 @@ public class Translator {
 		closeScope();
 	}
 
-	private void translateIfStat(IfStat stat) {
+	private void ifStat(IfStat stat) {
 		ArrayList<Integer> elseList = null, endList = new ArrayList<>();
 		boolean first = true;
 		for (IfStat.Branch branch : stat.getBranchList()) {
@@ -273,12 +273,12 @@ public class Translator {
 
 	private void statements(Stat[] stats) {
 		for (Stat s : stats) {
-			translateStat(s);
+			stat(s);
 			this.freeReg = this.actVars.size();
 		}
 	}
 
-	private void translateLocalStat(LocalStat stat) {
+	private void localStat(LocalStat stat) {
 		String[] names = stat.getNames();
 		Expr[] es = stat.getExprs();
 
@@ -288,7 +288,7 @@ public class Translator {
 			}
 		}
 
-		translateAssignValues(es, names.length);
+		assignValues(es, names.length);
 
 		if (!stat.isAccessable()) {
 			for (String n : names) {
@@ -297,7 +297,7 @@ public class Translator {
 		}
 	}
 
-	private void translateFuncStat(FuncStat stat) {
+	private void funcStat(FuncStat stat) {
 		PrimaryExpr pe = new PrimaryExpr();
 
 		Var var = stat.getName().getVar();
@@ -316,12 +316,12 @@ public class Translator {
 		PrimaryExpr.Segment[] segs = ArrayUtil.map(fields, mapper, new PrimaryExpr.Segment[fields.length]);
 		pe.setSegments(segs);
 
-		AssignVarInfo info = translateAssignVar(pe);
-		int reg = translateFuncBody(stat.getBody(), RA_NEXT);
+		AssignVarInfo info = assignVar(pe);
+		int reg = funcBody(stat.getBody(), RA_NEXT);
 		storeVar(info, reg);
 	}
 
-	private void translateReturnStat(ReturnStat stat) {
+	private void returnStat(ReturnStat stat) {
 		Expr[] es = stat.getExprs();
 		int first = this.actVars.size(), nret = 0;
 		if (es != null) {
@@ -329,7 +329,7 @@ public class Translator {
 			Expr e = null;
 			for (int i = 0; i < es.length; ++i) {
 				e = es[i];
-				translateExpr(e, RA_NEXT);
+				expr(e, RA_NEXT);
 			}
 			if (e.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
@@ -343,23 +343,23 @@ public class Translator {
 		ret(first, nret);
 	}
 
-	private void translateAssignStat(AssignStat stat) {
+	private void assignStat(AssignStat stat) {
 		PrimaryExpr[] vars = stat.getVariables();
 		Expr[] vs = stat.getValues();
 
 		ArrayList<AssignVarInfo> infos = new ArrayList<>();
 		for (PrimaryExpr var : vars) {
-			infos.add(translateAssignVar(var));
+			infos.add(assignVar(var));
 		}
 
 		int start = this.freeReg;
-		translateAssignValues(vs, vars.length);
+		assignValues(vs, vars.length);
 		for (int i = infos.size() - 1; i >= 0; --i) {
 			storeVar(infos.get(i), start + i);
 		}
 	}
 
-	private AssignVarInfo translateAssignVar(PrimaryExpr var) {
+	private AssignVarInfo assignVar(PrimaryExpr var) {
 		Expr prefix = var.getPrefixExpr();
 		PrimaryExpr.Segment[] segments = var.getSegments();
 
@@ -369,7 +369,7 @@ public class Translator {
 			if (segments.length > 1) {
 				pe.setSegments(Arrays.copyOfRange(segments, 0, segments.length - 1));
 			}
-			int table = translatePrimaryExpr(pe, RA_NEXT);
+			int table = primaryExpr(pe, RA_NEXT);
 			Expr key = ((PrimaryExpr.FieldSegment)ArrayUtil.get(segments, -1)).getKey();
 			return AssignVarInfo.table(table, key);
 		} else if (prefix instanceof Var) {
@@ -385,21 +385,21 @@ public class Translator {
 				return null;
 			}
 		} else if (prefix instanceof PrimaryExpr) {
-			return translateAssignVar((PrimaryExpr)prefix);
+			return assignVar((PrimaryExpr)prefix);
 		} else {
 			assert false;
 			return null;
 		}
 	}
 
-	private int translateAssignValues(Expr[] vs, int need) {
+	private int assignValues(Expr[] vs, int need) {
 		int extra = need;
 		if (vs != null) {
 			extra -= vs.length;
 			Expr v = null;
 			for (int i = 0; i < vs.length; ++i) {
 				v = vs[i];
-				translateExpr(v, RA_NEXT);
+				expr(v, RA_NEXT);
 			}
 			if (v.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
@@ -414,27 +414,27 @@ public class Translator {
 		return this.freeReg;
 	}
 
-	private int translateExpr(Expr e, int alloc) {
+	private int expr(Expr e, int alloc) {
 		e = ExprUtil.reduce(e);
 		int start = this.freeReg, result = Instruction.NO_REG;
 		if (e instanceof KExpr) {
-			result = translateKExpr((KExpr) e, alloc);
+			result = kExpr((KExpr) e, alloc);
 		} else if (e instanceof Var) {
-			result = translateVar((Var)e, alloc);
+			result = var((Var)e, alloc);
 		} else if (e instanceof PrimaryExpr) {
-			result = translatePrimaryExpr((PrimaryExpr)e, alloc);
+			result = primaryExpr((PrimaryExpr)e, alloc);
 		} else if (e instanceof FuncExpr) {
 			FuncBody body = ((FuncExpr) e).getBody();
-			result = translateFuncBody(body, alloc);
+			result = funcBody(body, alloc);
 		} else if (e instanceof VarargExpr) {
 			result = reserveReg(1);
 			instruction(new Instruction(OpCode.VARARG, result, 2, 0));
 		} else if (e instanceof BinaryExpr) {
-			result = translateBinaryExpr((BinaryExpr)e, alloc);
+			result = binaryExpr((BinaryExpr)e, alloc);
 		} else if (e instanceof UnaryExpr) {
-			result = translateUnaryExpr((UnaryExpr)e, alloc);
+			result = unaryExpr((UnaryExpr)e, alloc);
 		} else if (e instanceof TableConstructorExpr) {
-			result = translateTableConstructor((TableConstructorExpr)e, alloc);
+			result = tableConstructor((TableConstructorExpr)e, alloc);
 		} else {
 			assert false;
 		}
@@ -443,7 +443,7 @@ public class Translator {
 		return result;
 	}
 
-	private int translateTableConstructor(TableConstructorExpr expr, int alloc) {
+	private int tableConstructor(TableConstructorExpr expr, int alloc) {
 		int table = reserveReg(1);
 		Instruction inst = new Instruction(OpCode.NEWTABLE, table, 0, 0);
 		instruction(inst);
@@ -457,13 +457,13 @@ public class Translator {
 				if (f instanceof TableConstructorExpr.ListField) {
 					na++;
 					toStore++;
-					translateExpr(f.getValue(), RA_NEXT);
+					expr(f.getValue(), RA_NEXT);
 				} else {
 					nh++;
 					TableConstructorExpr.RecField rf = (TableConstructorExpr.RecField)f;
 					int reg = this.freeReg;
-					int k = translateExpr(rf.getKey(), RA_RK);
-					int v = translateExpr(rf.getValue(), RA_RK);
+					int k = expr(rf.getKey(), RA_RK);
+					int v = expr(rf.getValue(), RA_RK);
 					instruction(new Instruction(OpCode.SETTABLE, table, k, v));
 					if (reg != this.freeReg) {
 						reserveReg(reg - this.freeReg);
@@ -505,18 +505,18 @@ public class Translator {
 		}
 	}
 
-	private int translateBinaryExpr(BinaryExpr expr, int alloc) {
+	private int binaryExpr(BinaryExpr expr, int alloc) {
 		if (ExprUtil.isArithExpr(expr)) {
-			return translateArithExpr(expr, alloc);
+			return arithExpr(expr, alloc);
 		} else if (ExprUtil.isCompExpr(expr)) {
-			return translateCompExpr(expr, alloc);
+			return compExpr(expr, alloc);
 		} else {
 			assert ExprUtil.isLogicalExpr(expr);
-			return translateLogicalExpr(expr, alloc);
+			return logicalExpr(expr, alloc);
 		}
 	}
 
-	private int translateLogicalExpr(BinaryExpr expr, int alloc) {
+	private int logicalExpr(BinaryExpr expr, int alloc) {
 		if (alloc < RA_NEXT) {
 			alloc = RA_NEXT;
 		}
@@ -572,7 +572,7 @@ public class Translator {
 			if (alloc == RA_NONE) {
 				return logicalNormalOperand(expr, goIfTrue);
 			} else {
-				return new LogicalContext(translateExpr(expr, alloc));
+				return new LogicalContext(expr(expr, alloc));
 			}
 		}
 	}
@@ -589,7 +589,7 @@ public class Translator {
 	}
 
 	private LogicalContext logicalCompOperand(BinaryExpr expr, boolean goIfTrue) {
-		LogicalContext ctx = new LogicalContext(translateCompExpr(expr, RA_NONE));
+		LogicalContext ctx = new LogicalContext(compExpr(expr, RA_NONE));
 		if (goIfTrue) {
 			Instruction inst = ArrayUtil.get(getCode(), -2);
 			inst.setA(inst.getA() == 0);
@@ -601,7 +601,7 @@ public class Translator {
 	}
 
 	private LogicalContext logicalNormalOperand(Expr expr, boolean goIfTrue) {
-		int reg = translateExpr(expr, RA_ANY);
+		int reg = expr(expr, RA_ANY);
 		freeReg(reg);
 
 		LogicalContext ctx = new LogicalContext(reg);
@@ -621,7 +621,7 @@ public class Translator {
 		return ctx;
 	}
 
-	private int translateCompExpr(BinaryExpr expr, int alloc) {
+	private int compExpr(BinaryExpr expr, int alloc) {
 		BinaryExpr.Operator operator = expr.getOperator();
 		OpCode op = ExprUtil.toCompOpCode(operator);
 		assert op != null;
@@ -636,7 +636,7 @@ public class Translator {
 		}
 
 		int start = this.freeReg;
-		int left = translateExpr(expr.getLeft(), RA_RK), right = translateExpr(expr.getRight(), RA_RK);
+		int left = expr(expr.getLeft(), RA_RK), right = expr(expr.getRight(), RA_RK);
 		this.freeReg = start;
 
 		if (cond == 0 && op != OpCode.EQ) {
@@ -656,7 +656,7 @@ public class Translator {
 		return Instruction.NO_REG;
 	}
 
-	private int translateArithExpr(BinaryExpr expr, int alloc) {
+	private int arithExpr(BinaryExpr expr, int alloc) {
 		LValue fv = expr.foldedValue();
 		if (fv != null) {
 			return translateLValue(fv, alloc);
@@ -670,13 +670,13 @@ public class Translator {
 		boolean needMerge = false;
 		if (op == OpCode.CONCAT) {
 			Expr re = expr.getRight();
-			left = translateExpr(expr.getLeft(), RA_NEXT);
-			right = translateExpr(re, RA_NEXT);
+			left = expr(expr.getLeft(), RA_NEXT);
+			right = expr(re, RA_NEXT);
 			needMerge = re instanceof BinaryExpr
 				&& ((BinaryExpr)re).getOperator() == BinaryExpr.Operator.CONCAT;
 		} else {
-			left = translateExpr(expr.getLeft(), RA_RK);
-			right = translateExpr(expr.getRight(), RA_RK);
+			left = expr(expr.getLeft(), RA_RK);
+			right = expr(expr.getRight(), RA_RK);
 		}
 		this.freeReg = start;
 		int result = requestReg(alloc);
@@ -692,7 +692,7 @@ public class Translator {
 		return result;
 	}
 
-	private int translateUnaryExpr(UnaryExpr expr, int alloc) {
+	private int unaryExpr(UnaryExpr expr, int alloc) {
 		LValue fv = expr.foldedValue();
 		if (fv != null) {
 			return translateLValue(fv, alloc);
@@ -706,7 +706,7 @@ public class Translator {
 		}
 
 		int start = this.freeReg;
-		int operand = translateExpr(expr.getOperand(), RA_ANY);
+		int operand = expr(expr.getOperand(), RA_ANY);
 		this.freeReg = start;
 		int result = requestReg(alloc);
 		instruction(new Instruction(op, result, operand, 0));
@@ -714,7 +714,7 @@ public class Translator {
 		return result;
 	}
 
-	private int translatePrimaryExpr(PrimaryExpr expr, int alloc) {
+	private int primaryExpr(PrimaryExpr expr, int alloc) {
 		PrimaryExpr.Segment[] segments = expr.getSegments();
 		Expr prefixExpr = expr.getPrefixExpr();
 
@@ -725,13 +725,13 @@ public class Translator {
 			prefixAlloc = RA_ANY;
 		}
 
-		int prefix = translateExpr(prefixExpr, prefixAlloc);
+		int prefix = expr(prefixExpr, prefixAlloc);
 		freeReg(prefix);
 		final int base = this.freeReg;
 		for (PrimaryExpr.Segment seg : expr.getSegments()) {
 			if (seg instanceof PrimaryExpr.FieldSegment) {
 				Expr key = ((PrimaryExpr.FieldSegment)seg).getKey();
-				int rk = translateExpr(key, RA_RK);
+				int rk = expr(key, RA_RK);
 				freeReg(rk);
 				index(reserveReg(1), prefix, rk);
 			} else if (seg instanceof PrimaryExpr.ArgsSegment) {
@@ -739,7 +739,7 @@ public class Translator {
 				translateArgs(args, reserveReg(1));
 			} else if (seg instanceof PrimaryExpr.MethodSegment) {
 				PrimaryExpr.MethodSegment fs = (PrimaryExpr.MethodSegment)seg;
-				int rk = translateExpr(new LiteralString(fs.getName()), RA_RK);
+				int rk = expr(new LiteralString(fs.getName()), RA_RK);
 				freeReg(rk);
 				reserveReg(1);
 				instruction(new Instruction(OpCode.SELF, base, prefix, rk));
@@ -767,7 +767,7 @@ public class Translator {
 	private void translateArgs(Expr[] args, int func) {
 		if (args != null) {
 			for (Expr e : args) {
-				translateExpr(e, RA_NEXT);
+				expr(e, RA_NEXT);
 			}
 		}
 		int np = this.freeReg - func - 1;
@@ -775,7 +775,7 @@ public class Translator {
 		reserveReg(-np);
 	}
 
-	private int translateVar(Var var, int alloc) {
+	private int var(Var var, int alloc) {
 		VarInfo info = singleVar(var.getName());
 		int reg = Instruction.NO_REG;
 		switch (info.type) {
@@ -804,7 +804,7 @@ public class Translator {
 		return reg;
 	}
 
-	private int translateFuncBody(FuncBody body, int alloc) {
+	private int funcBody(FuncBody body, int alloc) {
 		Translator t = new Translator(body.getChunk(), this);
 		if (body.isNeedSelf()) {
 			t.numParams++;
@@ -838,7 +838,7 @@ public class Translator {
 		return reg;
 	}
 
-	private int translateKExpr(KExpr e, int alloc) {
+	private int kExpr(KExpr e, int alloc) {
 		return translateLValue(e.toLuaValue(), alloc);
 	}
 
@@ -1088,7 +1088,7 @@ public class Translator {
 		} else if (info.type == AssignVarInfo.GLOBAL) {
 			instruction(new Instruction(OpCode.SETGLOBAL, reg, info.info));
 		} else if (info.type == AssignVarInfo.TABLE) {
-			int key = translateExpr(info.key, RA_RK);
+			int key = expr(info.key, RA_RK);
 			instruction(new Instruction(OpCode.SETTABLE, info.info, key, reg));
 		} else {
 			assert false;

@@ -2,7 +2,7 @@ package lamo.luaj.translator;
 
 import lamo.luaj.parser.ast.Expr;
 
-public class AssignVarInfo {
+class AssignVarInfo {
 
 	static final int LOCAL = 1;		// info = reg
 	static final int UPVALUE = 2;	// info = index
