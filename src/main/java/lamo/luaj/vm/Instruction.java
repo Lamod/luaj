@@ -48,7 +48,6 @@ public class Instruction {
 
 	private int value;
 
-	// TODO: check format
 	public Instruction(int value) {
 		this.value = value;
 	}
@@ -60,7 +59,12 @@ public class Instruction {
 
 	public Instruction(OpCode code, int a, int bx) {
 		assert code.getOpMode() != OpCode.OpMode.iABC;
-		this.value = code.getIndex() | a << POS_A | bx << POS_Bx;
+		this.value = code.getIndex() | a << POS_A;
+		if (code.getOpMode() == OpCode.OpMode.iABx) {
+			setBx(bx);
+		} else {
+			setsBx(bx);
+		}
 	}
 
 	public int getValue() {
