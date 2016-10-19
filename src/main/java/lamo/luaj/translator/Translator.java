@@ -99,7 +99,11 @@ public class Translator {
 		} else if (stat instanceof IfStat) {
 			translateIfStat((IfStat)stat);
 		} else if (stat instanceof WhileStat) {
-			translateWhileStat((WhileStat)stat);
+			translateWhileStat((WhileStat) stat);
+		} else if (stat instanceof NumbericForStat) {
+			translateNumbericForStat((NumbericForStat)stat);
+		} else if (stat instanceof GenericForStat) {
+			translateGenericForStat((GenericForStat)stat);
 		} else if (stat instanceof LocalStat) {
 			translateLocalStat((LocalStat)stat);
 		} else if (stat instanceof BlockStat) {
@@ -149,12 +153,12 @@ public class Translator {
 		ArrayList<Integer> endList = logicalLeftOperand(stat.getCondition(), true).flist;
 		if (!scope.hasUpvalue) {
 			closeScope();
-			patchList(endList, init, init, Instruction.NO_REG);
+			patchList(endList, init);
 		} else {
 			translateBreakStat();
 			patchToHere(endList);
 			closeScope();
-			patchJump(jump(), init, init, Instruction.NO_REG);
+			patchJump(jump(), init);
 		}
 
 		closeScope();
@@ -167,8 +171,65 @@ public class Translator {
 		openScope(true);
 
 		block(stat.getBlock());
-		patchJump(jump(), init, init, Instruction.NO_REG);
+		patchJump(jump(), init);
 		patchToHere(ctx.flist);
+
+		closeScope();
+	}
+
+	private void translateNumbericForStat(NumbericForStat stat) {
+		openScope(true);
+		int base = this.freeReg;
+
+		translateExpr(stat.getInitExpr(), RA_NEXT);
+		translateExpr(stat.getLimitExpr(), RA_NEXT);
+		if (stat.getStepExpr() != null) {
+			translateExpr(stat.getStepExpr(), RA_NEXT);
+		} else {
+			loadK(addKNumber(1), reserveReg(1));
+		}
+		addLocalVar("(for index)");
+		addLocalVar("(for limit)");
+		addLocalVar("(for step)");
+		instruction(new Instruction(OpCode.FORPREP, base, Instruction.NO_JUMP));
+		int prep = pc() - 1;
+
+		openScope(false);
+		addLocalVar(stat.getVarName());
+		reserveReg(1);
+		block(stat.getBlock());
+		closeScope();
+
+		patchJump(prep);
+		instruction(new Instruction(OpCode.FORLOOP, base, Instruction.NO_JUMP));
+		int end = pc() - 1;
+		patchJump(end, prep + 1);
+
+		closeScope();
+	}
+
+	private void translateGenericForStat(GenericForStat stat) {
+		openScope(true);
+		int base = this.freeReg;
+
+		translateAssignValues(stat.getExprs(), 3);
+		addLocalVar("(for generator");
+		addLocalVar("(for state)");
+		addLocalVar("(for control");
+		int prep = jump();
+
+		openScope(false);
+		int n = stat.getNames().length;
+		for (String name : stat.getNames()) {
+			addLocalVar(name);
+		}
+		reserveReg(n);
+		block(stat.getBlock());
+		closeScope();
+
+		patchJump(prep);
+		instruction(new Instruction(OpCode.TFORLOOP, base, 0, n));
+		patchJump(jump(), prep + 1);
 
 		closeScope();
 	}
@@ -343,7 +404,6 @@ public class Translator {
 			if (v.hasMultRet()) {
 				Instruction last = ArrayUtil.get(getCode(), -1);
 				setReturns(last, extra >= 0 ? extra + 1 : 0);
-				reserveReg(extra);
 				extra = 0;
 			}
 		}
@@ -812,18 +872,18 @@ public class Translator {
 
 	private void closeScope() {
 		Scope scope = getLastScope();
-		int pc = getCode().size();
-		int n = scope.startOfActVar;
-		for (int i = n; i < this.actVars.size(); ++i) {
-			this.localVars.get(this.actVars.get(i)).endPC = pc;
+		int pc = pc();
+		int n = scope.startOfActVar, s = this.actVars.size();
+		if (n < s) {
+			for (int i = n; i < s; ++i) {
+				this.localVars.get(this.actVars.get(i)).endPC = pc;
+			}
+			this.actVars.subList(n, s).clear();
 		}
 
 		if (scope.hasUpvalue) {
 			instruction(new Instruction(OpCode.CLOSE, n, 0, 0));
 		}
-
-		int s = this.actVars.size();
-		this.actVars.subList(s - n, s).clear();
 
 		patchToHere(scope.breakList);
 
@@ -926,6 +986,10 @@ public class Translator {
 		patchList(js, pc, pc, Instruction.NO_REG);
 	}
 
+	private void patchList(List<Integer> list, int dest) {
+		patchList(list, dest, dest, Instruction.NO_REG);
+	}
+
 	private void patchList(List<Integer> list, int dest, int vdest, int reg) {
 		if (ArrayUtil.isEmpty(list)) {
 			return;
@@ -935,6 +999,14 @@ public class Translator {
 			patchJump(jmp, dest, vdest, reg);
 		}
 		list.clear();
+	}
+
+	private void patchJump(int jmp) {
+		patchJump(jmp, pc());
+	}
+
+	private void patchJump(int jmp, int dest) {
+		patchJump(jmp, dest, dest, Instruction.NO_REG);
 	}
 
 	private void patchJump(int jmp, int dest, int vdest, int reg) {
@@ -983,8 +1055,8 @@ public class Translator {
 		return pc() - 1;
 	}
 
-	private int addKNumber(String n) {
-		return addK(new LNumber(Double.parseDouble(n)));
+	private int addKNumber(double n) {
+		return addK(new LNumber(n));
 	}
 
 	private int addKString(String s) {
