@@ -162,9 +162,15 @@ public class Translator {
 
 	private void translateWhileStat(WhileStat stat) {
 		int init = pc();
-		ArrayList<Integer> endList = testThenBlock(stat.getCondition(), stat.getBlock());
+		LogicalContext ctx = logicalLeftOperand(stat.getCondition(), true);
+
+		openScope(true);
+
+		block(stat.getBlock());
 		patchJump(jump(), init, init, Instruction.NO_REG);
-		patchToHere(endList);
+		patchToHere(ctx.flist);
+
+		closeScope();
 	}
 
 	private void translateIfStat(IfStat stat) {
