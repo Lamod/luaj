@@ -10,16 +10,10 @@ public class TestParser {
             System.out.println("=== " + file + "(" + reader.getEncoding() + ") ===");
 
 			Parser p = new Parser(file, new FileReader(file));
-
-			try {
-				Chunk c = p.parse();
-				System.out.println(c.getStatements().length + " statements:");
-				System.out.println(c.toCode());
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-				p.close();
-			}
+			Chunk c = p.parse();
+			System.out.println(c.getStatements().length + " statements:");
+			System.out.println(c.toCode());
+			p.close();
         }
     }
 

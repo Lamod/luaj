@@ -11,16 +11,12 @@ public class TestLexer {
             System.out.println("=== " + file + "(" + reader.getEncoding() + ") ===");
 
             Lexer l = new Lexer(file, new FileReader(file));
-            try {
-                Token t = l.next();
-                while (t.getType() != TType.EOF) {
-                    System.out.println(t);
-                    t = l.next();
-                }
+            Token t = l.next();
+            while (t.getType() != TType.EOF) {
+                System.out.println(t);
+                t = l.next();
             }
-            finally {
-                l.close();
-            }
+            l.close();
         }
     }
 
