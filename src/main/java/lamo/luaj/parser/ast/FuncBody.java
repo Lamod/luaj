@@ -68,7 +68,7 @@ public class FuncBody extends Node {
 		public String toCode() {
 			StringBuilder sb = new StringBuilder();
 			if (this.params != null) {
-				sb.append(ArrayUtil.join(this.params, CODE_SERIALIZOR, ", "));
+				sb.append(ArrayUtil.join(this.params, CODE_SERIALIZER, ", "));
 			}
 			if (this.vararg) {
 				if (this.params != null) {

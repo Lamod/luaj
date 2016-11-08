@@ -46,7 +46,7 @@ public class GenericForStat extends Stat {
 		sb.append("for ");
 		sb.append(ArrayUtil.join(this.names, ", "));
 		sb.append(" in ");
-		sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZOR, ", "));
+		sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZER, ", "));
 		sb.append(" do\n");
 		sb.append(this.block.toCode());
 		sb.append(intend);

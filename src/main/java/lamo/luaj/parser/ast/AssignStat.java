@@ -27,13 +27,13 @@ public class AssignStat extends Stat {
 		StringBuilder sb = new StringBuilder();
 		sb.append(getIntend());
 
-		sb.append(ArrayUtil.join(this.variables, CODE_SERIALIZOR, ", "));
+		sb.append(ArrayUtil.join(this.variables, CODE_SERIALIZER, ", "));
 		if (this.values == null) {
 			return sb.toString();
 		} 
 
 		sb.append(" = ");
-		sb.append(ArrayUtil.join(this.values, CODE_SERIALIZOR, ", "));
+		sb.append(ArrayUtil.join(this.values, CODE_SERIALIZER, ", "));
 		sb.append("\n");
 
 		return sb.toString();

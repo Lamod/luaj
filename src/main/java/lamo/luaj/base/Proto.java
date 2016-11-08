@@ -1,6 +1,6 @@
-package lamo.luaj.vm;
+package lamo.luaj.base;
 
-import lamo.luaj.LValue;
+import lamo.luaj.vm.Instruction;
 
 public class Proto {
 
@@ -11,10 +11,15 @@ public class Proto {
 	private final LValue[] ks;
 	private final int numParams;
 	private final boolean vararg;
+	private final int lineDefined, lastLineDefined;
+	private final int maxStackSize;
+	private final String source;
 
 	public Proto(Instruction[] code, Proto[] ps,
-			LocVar[] locVars, String[] upValues, LValue[] ks,
-			int numParams, boolean vararg) {
+				 LocVar[] locVars, String[] upValues, LValue[] ks,
+				 int numParams, boolean vararg,
+				 int lineDefined, int lastLineDefined,
+				 int maxStackSize, String source) {
 		this.code = code;
 		this.ps = ps;
 		this.locVars = locVars;
@@ -22,6 +27,10 @@ public class Proto {
 		this.ks = ks;
 		this.numParams = numParams;
 		this.vararg = vararg;
+		this.lineDefined = lineDefined;
+		this.lastLineDefined = lastLineDefined;
+		this.maxStackSize = maxStackSize;
+		this.source = source;
 	}
 
 	public Instruction[] getCode() {
@@ -45,11 +54,27 @@ public class Proto {
 	}
 
 	public int getNumParams() {
-		return numParams;
+		return this.numParams;
 	}
 
 	public boolean isVararg() {
-		return vararg;
+		return this.vararg;
+	}
+
+	public int getLineDefined() {
+		return this.lineDefined;
+	}
+
+	public int getMaxStackSize() {
+		return this.maxStackSize;
+	}
+
+	public String getSource() {
+		return this.source;
+	}
+
+	public int getLastLineDefined() {
+		return this.lastLineDefined;
 	}
 
 	public String toString() {

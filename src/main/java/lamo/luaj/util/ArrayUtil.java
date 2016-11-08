@@ -1,11 +1,10 @@
 package lamo.luaj.util;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ArrayUtil {
 
-	public interface Serializor {
+	public interface Serializer {
 		String serialize(Object o);
 	}
 
@@ -13,16 +12,16 @@ public class ArrayUtil {
 		T map(U u);
 	}
 
-	static public String join(Object[] a, String sep) {
-		Serializor sor = new Serializor() {
-			public String serialize(Object o) {
-				return o.toString();
-			}
-		};
-		return join(a, sor, sep);
+	public interface Enumerator<E> {
+		boolean enumerate(int idx, E e);
 	}
 
-	static public String join(Object[] a, Serializor sor, String sep) {
+	static public String join(Object[] a, String sep) {
+		Serializer ser = o -> o.toString();
+		return join(a, ser, sep);
+	}
+
+	static public String join(Object[] a, Serializer ser, String sep) {
 		if (a == null || a.length == 0) {
 			return "";
 		}
@@ -35,7 +34,7 @@ public class ArrayUtil {
 			} else {
 				sb.append(sep);
 			}
-			sb.append(sor.serialize(o));
+			sb.append(ser.serialize(o));
 		}
 
 		return sb.toString();
@@ -73,6 +72,22 @@ public class ArrayUtil {
 		return l == null || l.size() == 0;
 	}
 
+	static public <T> int sizeOf(T[] a) {
+		if (a == null) {
+			return 0;
+		} else {
+			return a.length;
+		}
+	}
+
+	static public <T> int sizeOf(List<T> l) {
+		if (l == null) {
+			return 0;
+		} else {
+			return l.size();
+		}
+	}
+
 	static public <T, U> T[] map(U[] us, Mapper<T, U> mapper, T[] ts) {
 		if (isEmpty(us) || mapper == null) {
 			return null;
@@ -84,6 +99,30 @@ public class ArrayUtil {
 			ts[i] = mapper.map(us[i]);
 		}
 		return ts;
+	}
+
+	static public <E> void enumerate(E[] a, Enumerator<E> enumerator) {
+		if (isEmpty(a) || enumerator == null) {
+			return;
+		}
+
+		for (int i = 0; i < a.length; ++i) {
+			if (enumerator.enumerate(i, a[i])) {
+				break;
+			}
+		}
+	}
+
+	static public <E> void enumerate(List<E> l, Enumerator<E> enumerator) {
+		if (isEmpty(l) || enumerator == null) {
+			return;
+		}
+
+		for (int i = 0; i < l.size(); ++i) {
+			if (enumerator.enumerate(i, l.get(i))) {
+				break;
+			}
+		}
 	}
 
 }

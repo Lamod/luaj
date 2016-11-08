@@ -1,7 +1,7 @@
 package lamo.luaj.parser.ast;
 
-import lamo.luaj.LString;
-import lamo.luaj.LValue;
+import lamo.luaj.base.LString;
+import lamo.luaj.base.LValue;
 
 public class LiteralString extends KExpr {
 

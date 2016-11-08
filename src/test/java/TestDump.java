@@ -1,13 +1,16 @@
+import lamo.luaj.Dumper;
+import lamo.luaj.base.Proto;
 import lamo.luaj.parser.Parser;
 import lamo.luaj.parser.ParserException;
 import lamo.luaj.parser.ast.Chunk;
 import lamo.luaj.translator.Translator;
-import lamo.luaj.base.Proto;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 
-public class TestTranslator {
+public class TestDump {
 
 	public static void main(String[] args) throws FileNotFoundException, ParserException {
 		for (String file: args) {
@@ -23,7 +26,11 @@ public class TestTranslator {
 				Chunk c = p.parse();
 				Translator t = new Translator(c);
 				Proto fun = t.translate();
-				System.out.println(fun);
+				File f = new File("luac.out");
+				f.createNewFile();
+				FileOutputStream out = new FileOutputStream(f);
+				Dumper dumper = new Dumper(fun, out, false);
+				dumper.dump();
 			} catch (Exception e) {
 				e.printStackTrace();
 			} finally {
@@ -31,5 +38,4 @@ public class TestTranslator {
 			}
 		}
 	}
-
 }

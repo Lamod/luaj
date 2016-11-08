@@ -1,8 +1,8 @@
 package lamo.luaj.parser.ast;
 
-import lamo.luaj.LBoolean;
-import lamo.luaj.LNumber;
-import lamo.luaj.LValue;
+import lamo.luaj.base.LBoolean;
+import lamo.luaj.base.LNumber;
+import lamo.luaj.base.LValue;
 import lamo.luaj.parser.Token;
 import lamo.luaj.parser.Token.TType;
 

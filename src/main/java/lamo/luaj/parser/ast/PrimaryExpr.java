@@ -117,7 +117,7 @@ public class PrimaryExpr extends Expr {
 		public String toCode() {
 			StringBuilder sb = new StringBuilder();
 			sb.append("(");
-			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZOR, ", "));
+			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZER, ", "));
 			sb.append(")");
 
 			return sb.toString();
@@ -151,7 +151,7 @@ public class PrimaryExpr extends Expr {
 			sb.append(":");
 			sb.append(this.name);
 			sb.append("(");
-			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZOR, ", "));
+			sb.append(ArrayUtil.join(this.args, CODE_SERIALIZER, ", "));
 			sb.append(")");
 
 			return sb.toString();

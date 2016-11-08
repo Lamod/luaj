@@ -1,7 +1,7 @@
 package lamo.luaj.parser.ast;
 
-import lamo.luaj.LNil;
-import lamo.luaj.LValue;
+import lamo.luaj.base.LNil;
+import lamo.luaj.base.LValue;
 
 public class Nil extends KExpr {
 

@@ -1,7 +1,7 @@
 package lamo.luaj.parser.ast;
 
-import lamo.luaj.LNumber;
-import lamo.luaj.LValue;
+import lamo.luaj.base.LNumber;
+import lamo.luaj.base.LValue;
 
 public class LiteralNumber extends KExpr {
 

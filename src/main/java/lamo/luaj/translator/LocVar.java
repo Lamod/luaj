@@ -1,6 +1,6 @@
 package lamo.luaj.translator;
 
-import lamo.luaj.vm.Proto;
+import lamo.luaj.base.Proto;
 
 class LocVar {
 

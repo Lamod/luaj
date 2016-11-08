@@ -1,7 +1,7 @@
 package lamo.luaj.parser.ast;
 
-import lamo.luaj.LBoolean;
-import lamo.luaj.LValue;
+import lamo.luaj.base.LBoolean;
+import lamo.luaj.base.LValue;
 
 public class False extends KExpr {
 

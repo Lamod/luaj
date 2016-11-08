@@ -17,7 +17,7 @@ public class TableConstructorExpr extends Expr {
 	public String toCode() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("{");
-		sb.append(ArrayUtil.join(this.fields, CODE_SERIALIZOR, ", "));
+		sb.append(ArrayUtil.join(this.fields, CODE_SERIALIZER, ", "));
 		sb.append("}");
 
 		return sb.toString();

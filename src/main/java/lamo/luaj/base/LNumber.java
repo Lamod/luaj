@@ -1,4 +1,4 @@
-package lamo.luaj;
+package lamo.luaj.base;
 
 public class LNumber extends LValue {
 

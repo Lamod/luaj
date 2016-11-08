@@ -21,7 +21,7 @@ public class ReturnStat extends LastStat {
 		sb.append("return");
 		if (this.exprs != null) {
 			sb.append(" ");
-			sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZOR, ", "));
+			sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZER, ", "));
 		}
 		sb.append("\n");
 

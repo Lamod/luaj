@@ -1,12 +1,13 @@
 package lamo.luaj.translator;
 
 import lamo.luaj.*;
+import lamo.luaj.base.*;
 import lamo.luaj.parser.ast.*;
 import lamo.luaj.util.ArrayUtil;
 import lamo.luaj.util.BoolUtil;
 import lamo.luaj.vm.Instruction;
 import lamo.luaj.vm.OpCode;
-import lamo.luaj.vm.Proto;
+import lamo.luaj.base.Proto;
 
 import java.util.*;
 
@@ -29,7 +30,7 @@ public class Translator {
 	private LinkedList<Integer> actVars = new LinkedList<>();
 	private ArrayList<UpValue> upvalues = new ArrayList<>();
 	private ArrayList<LValue> ks = new ArrayList<>();
-	private int freeReg;
+	private int freeReg, maxStackSize;
 
 	private Stack<Scope> scopes = new Stack<>();
 	private ArrayList<Proto> ps = new ArrayList<>();
@@ -83,7 +84,8 @@ public class Translator {
 		}
 		LValue[] ks = this.ks.toArray(new LValue[this.ks.size()]);
 
-		this.proto = new Proto(is, ps, ls, null, ks, this.numParams, this.vararg);
+		this.proto = new Proto(is, ps, ls, uvs, ks,
+			this.numParams, this.vararg, 0, 0, this.maxStackSize, null);
 		return this.proto;
 	}
 
@@ -213,9 +215,9 @@ public class Translator {
 		int base = this.freeReg;
 
 		assignValues(stat.getExprs(), 3);
-		addLocalVar("(for generator");
+		addLocalVar("(for generator)");
 		addLocalVar("(for state)");
-		addLocalVar("(for control");
+		addLocalVar("(for control)");
 		int prep = jump();
 
 		openScope(false);
@@ -1179,6 +1181,9 @@ public class Translator {
 	private int reserveReg(int n) {
 		int reg = this.freeReg;
 		this.freeReg += n;
+		if (n > 0 && this.freeReg > this.maxStackSize) {
+			this.maxStackSize = this.freeReg;
+		}
 		return reg;
 	}
 

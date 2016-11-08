@@ -1,6 +1,6 @@
 package lamo.luaj.parser.ast;
 
-import lamo.luaj.LValue;
+import lamo.luaj.base.LValue;
 
 public abstract class KExpr extends Expr {
 

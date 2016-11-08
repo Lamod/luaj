@@ -47,7 +47,7 @@ public class LocalStat extends Stat {
 				sb.append(names);
 			}
 			sb.append(" = ");
-			sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZOR, ", "));
+			sb.append(ArrayUtil.join(this.exprs, CODE_SERIALIZER, ", "));
 		}
 		sb.append("\n");
 			
