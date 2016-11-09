@@ -72,7 +72,7 @@ public class Dumper {
 		writeUTF(out, Lua.SIGNATURE, false);
 		out.writeByte(Luac.VERSION);
 		out.writeByte(Luac.FORMAT);
-		out.writeBoolean(Config.LITTLE_ENDIAN); // is little endian?
+		out.writeBoolean(Config.littleEndian); // is little endian?
 		out.writeByte(4); // size of int
 		out.writeByte(8); // size of size_t
 		out.writeByte(4); // size of Instruction
@@ -131,7 +131,7 @@ public class Dumper {
 	}
 
 	private void dumpInt(int i) throws IOException {
-		this.out.write(ByteOrderUtil.toBytes(i, Config.LITTLE_ENDIAN));
+		this.out.write(ByteOrderUtil.toBytes(i, Config.littleEndian));
 	}
 
 	private void dumpByte(int b) throws IOException {
@@ -148,11 +148,11 @@ public class Dumper {
 	}
 
 	private void dumpSize(int s) throws IOException {
-		this.out.write(ByteOrderUtil.toBytes((long)s, Config.LITTLE_ENDIAN));
+		this.out.write(ByteOrderUtil.toBytes((long)s, Config.littleEndian));
 	}
 
 	private void dumpNumber(double n) throws IOException {
-		this.out.write(ByteOrderUtil.toBytes(n, Config.LITTLE_ENDIAN));
+		this.out.write(ByteOrderUtil.toBytes(n, Config.littleEndian));
 	}
 
 	private void dumpBoolean(boolean b) throws IOException {

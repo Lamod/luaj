@@ -468,7 +468,7 @@ public class Translator {
 						reserveReg(reg - this.freeReg);
 					}
 				}
-				if (toStore > 0 && (toStore == Config.LFIELDS_PER_FLUSH || i == fs.length - 1)) {
+				if (toStore > 0 && (toStore == Config.fieldsPerFlush || i == fs.length - 1)) {
 					int b;
 					if (i == fs.length - 1
 							&& f instanceof TableConstructorExpr.ListField
@@ -480,7 +480,7 @@ public class Translator {
 					} else {
 						b = toStore;
 					}
-					int c = (na - 1) / Config.LFIELDS_PER_FLUSH + 1;
+					int c = (na - 1) / Config.fieldsPerFlush + 1;
 					if (c <= Instruction.MAX_C) {
 						instruction(new Instruction(OpCode.SETLIST, table, b, c));
 					} else {
