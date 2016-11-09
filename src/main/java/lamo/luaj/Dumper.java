@@ -2,7 +2,7 @@ package lamo.luaj;
 
 import lamo.luaj.base.*;
 import lamo.luaj.util.ArrayUtil;
-import lamo.luaj.util.EndianUtil;
+import lamo.luaj.util.ByteOrderUtil;
 import lamo.luaj.vm.Instruction;
 
 import java.io.ByteArrayOutputStream;
@@ -72,7 +72,7 @@ public class Dumper {
 		writeUTF(out, Lua.SIGNATURE, false);
 		out.writeByte(Luac.VERSION);
 		out.writeByte(Luac.FORMAT);
-		out.writeBoolean(!Config.BIG_ENDIAN); // is little endian?
+		out.writeBoolean(Config.LITTLE_ENDIAN); // is little endian?
 		out.writeByte(4); // size of int
 		out.writeByte(8); // size of size_t
 		out.writeByte(4); // size of Instruction
@@ -131,11 +131,7 @@ public class Dumper {
 	}
 
 	private void dumpInt(int i) throws IOException {
-		if (Config.BIG_ENDIAN) {
-			this.out.writeInt(i);
-		} else {
-			this.out.write(EndianUtil.littleEndian(i));
-		}
+		this.out.write(ByteOrderUtil.toBytes(i, Config.LITTLE_ENDIAN));
 	}
 
 	private void dumpByte(int b) throws IOException {
@@ -152,19 +148,11 @@ public class Dumper {
 	}
 
 	private void dumpSize(int s) throws IOException {
-		if (Config.BIG_ENDIAN) {
-			this.out.writeLong(s);
-		} else {
-			this.out.write(EndianUtil.littleEndian((long)s));
-		}
+		this.out.write(ByteOrderUtil.toBytes((long)s, Config.LITTLE_ENDIAN));
 	}
 
 	private void dumpNumber(double n) throws IOException {
-		if (Config.BIG_ENDIAN) {
-			this.out.writeDouble(n);
-		} else {
-			this.out.write(EndianUtil.littleEndian(n));
-		}
+		this.out.write(ByteOrderUtil.toBytes(n, Config.LITTLE_ENDIAN));
 	}
 
 	private void dumpBoolean(boolean b) throws IOException {

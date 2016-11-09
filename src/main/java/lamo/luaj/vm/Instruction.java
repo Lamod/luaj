@@ -18,7 +18,7 @@ public class Instruction {
 	static public final int MAX_B = (1 << SIZE_B) - 1;
 	static public final int MAX_C = (1 << SIZE_C) - 1;
 	static public final int MAX_Bx = (1 << SIZE_Bx) - 1;
-	static public final int MAX_sBx = MAX_Bx >> 1; // sign bit
+	static public final int MAX_sBx = MAX_Bx >>> 1; // sign bit
 
 	static public final int NO_REG = MAX_A;
 	static public final int NO_JUMP = -1;
@@ -170,7 +170,7 @@ public class Instruction {
 	}
 
 	private int getSegment(int pos, int size) {
-		return (value >> pos) & mask1(size, 0);
+		return (value >>> pos) & mask1(size, 0);
 	}
 
 	private int setSegment(int v, int pos, int size) {
