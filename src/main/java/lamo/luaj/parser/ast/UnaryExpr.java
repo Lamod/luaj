@@ -65,7 +65,8 @@ public class UnaryExpr extends Expr implements Foldable {
 		switch (this.operator) {
 			case MINUS:
 				if (this.operand instanceof LiteralNumber) {
-					return new LNumber(-Double.parseDouble(((LiteralNumber) this.operand).getText()));
+					String str = ((LiteralNumber) this.operand).getText();
+					return new LNumber(-Double.parseDouble(str));
 				} else if (this.operand instanceof BinaryExpr) {
 					LNumber n = ((BinaryExpr) this.operand).foldedValue();
 					return new LNumber(-n.getValue());

@@ -53,10 +53,10 @@ public class Parser implements Closeable {
 
 	private Stat[] stats(TType... terminators) throws ParserException {
 		ArrayList<Stat> statList = new ArrayList<>();
-        Stat stat = null;
-
+        Stat stat;
 		while (!testCurrent(TType.EOF)) {
-            if (terminators != null && ArrayUtil.contains(terminators, current.getType())) {
+            if (terminators != null
+            		&& ArrayUtil.contains(terminators, current.getType())) {
                 break;
             }
             stat = stat(terminators);
@@ -67,11 +67,13 @@ public class Parser implements Closeable {
             }
 		}
 
-		return statList.size() > 0 ? statList.toArray(new Stat[statList.size()]) : null;
+		return statList.size() > 0
+			? statList.toArray(new Stat[statList.size()])
+			: null;
 	}
 
 	private Stat stat(TType... terminators) throws ParserException {
-		Stat stat = null;
+		Stat stat;
 		switch (current.getType()) {
             case BREAK:
                 consume();
@@ -303,13 +305,13 @@ public class Parser implements Closeable {
 	}
 
 	private Expr[] exprs() throws ParserException {
-		ArrayList<Expr> exps = new ArrayList<>();
+		ArrayList<Expr> exprs = new ArrayList<>();
 
 		do {
-			exps.add(expr());
+			exprs.add(expr());
 		} while(tryMatch(TType.COMMA) != null);
 
-		return exps.toArray(new Expr[exps.size()]);
+		return exprs.toArray(new Expr[exprs.size()]);
 	}
 
 	private Expr expr() throws ParserException {
@@ -317,7 +319,7 @@ public class Parser implements Closeable {
 	}	
 
 	private Expr subexpr(int limit) throws ParserException {
-		Expr expr = null;
+		Expr expr;
 		UnaryExpr.Operator uop = UnaryExpr.getOperator(current);
 		if (uop != null) {
 			consume();
@@ -369,7 +371,7 @@ public class Parser implements Closeable {
 	}
 
 	private PrimaryExpr primaryExpr() throws ParserException {
-		Expr prefix = null;
+		Expr prefix;
 		if (testCurrent(TType.NAME)) {
 			prefix = new Var(consume().getText());
 		} else if (testCurrent(TType.LPARENT)) {
@@ -428,7 +430,9 @@ public class Parser implements Closeable {
 		PrimaryExpr primaryExpr = new PrimaryExpr();
 		primaryExpr.setPrefixExpr(prefix);
 		if (segmentList.size() > 0) {
-			primaryExpr.setSegments(segmentList.toArray(new PrimaryExpr.Segment[segmentList.size()]));
+			PrimaryExpr.Segment[] segs = new PrimaryExpr.Segment[segmentList.size()];
+			segs = segmentList.toArray(segs);
+			primaryExpr.setSegments(segs);
 		}
 
 		return primaryExpr;
@@ -502,7 +506,8 @@ public class Parser implements Closeable {
 					break;
 				}
 			}
-		} while ((tryMatch(TType.COMMA) != null || tryMatch(TType.SEMICOLON) != null) && !testCurrent(TType.RBRACE));
+		} while ((tryMatch(TType.COMMA) != null || tryMatch(TType.SEMICOLON) != null)
+				&& !testCurrent(TType.RBRACE));
 
 		return fields.toArray(new TableConstructorExpr.Field[fields.size()]);
 	}

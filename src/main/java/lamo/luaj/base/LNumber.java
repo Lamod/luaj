@@ -12,6 +12,10 @@ public class LNumber extends LValue {
 		this.value = value;
 	}
 
+	public LNumber(String str) {
+		this.value = Double.parseDouble(str);
+	}
+
 	public double getValue() {
 		return this.value;
 	}

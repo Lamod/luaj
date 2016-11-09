@@ -50,9 +50,9 @@ class ExprUtil {
 		switch (op) {
 			case NOT_EQUAL: case EQUAL:
 				return OpCode.EQ;
-			case GREATE_THAN: case LESS_THAN:
+			case GREAT_THAN: case LESS_THAN:
 				return OpCode.LT;
-			case GREATE_EQUAL: case LESS_EQUAL:
+			case GREAT_EQUAL: case LESS_EQUAL:
 				return OpCode.LE;
 			default:
 				return null;

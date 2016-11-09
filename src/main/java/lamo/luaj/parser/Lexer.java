@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 public class Lexer implements Closeable {
 
-    private final static HashMap<String, Token> reversed = new HashMap<String, Token>();
+    private final static HashMap<String, Token> reversed = new HashMap<>();
     static {
         reversed.put("and", new Token(TType.AND));
         reversed.put("break", new Token(TType.BREAK));
@@ -32,7 +32,7 @@ public class Lexer implements Closeable {
         reversed.put("true", new Token(TType.TRUE));
         reversed.put("until", new Token(TType.UNTIL));
         reversed.put("while", new Token(TType.WHILE));
-    };
+    }
     private final static char EOF_CHAR = (char)-1;
 
     private String fileName;
@@ -50,6 +50,10 @@ public class Lexer implements Closeable {
         this.fileName = fileName;
         this.reader = reader;
         consume();
+    }
+
+    public String getFileName() {
+        return fileName;
     }
 
     public Token next() throws LexerException {
@@ -494,7 +498,9 @@ public class Lexer implements Closeable {
     }
 
     private boolean isHex() {
-        return isDigit() || current >= 'a' && current <= 'f' || current >= 'A' && current <= 'F';
+        return isDigit()
+            || current >= 'a' && current <= 'f'
+            || current >= 'A' && current <= 'F';
     }
 
 }

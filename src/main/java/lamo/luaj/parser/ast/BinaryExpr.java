@@ -10,7 +10,8 @@ public class BinaryExpr extends Expr implements Foldable {
 	public enum Operator {
  		OR(1, 1, "or"),
 		AND(2, 2, "and"),
-		GREATE_THAN(3, 3, ">"), GREATE_EQUAL(3, 3, ">="), LESS_THAN(3, 3, "<"), LESS_EQUAL(3, 3, "<="),
+		GREAT_THAN(3, 3, ">"), GREAT_EQUAL(3, 3, ">="),
+		LESS_THAN(3, 3, "<"), LESS_EQUAL(3, 3, "<="),
 		EQUAL(3, 3, "=="), NOT_EQUAL(3, 3, "~="),
 		CONCAT(5, 4, ".."),
 		ADD(6, 6, "+"), SUB(6, 6, "-"),
@@ -53,8 +54,8 @@ public class BinaryExpr extends Expr implements Foldable {
 		switch (type) {
 			case OR: return Operator.OR;
 			case AND: return Operator.AND;
-			case GREAT_THAN: return Operator.GREATE_THAN;
-			case GREAT_EQUAL: return Operator.GREATE_EQUAL;
+			case GREAT_THAN: return Operator.GREAT_THAN;
+			case GREAT_EQUAL: return Operator.GREAT_EQUAL;
 			case LESS_THAN: return Operator.LESS_THAN;
 			case LESS_EQUAL: return Operator.LESS_EQUAL;
 			case EQUAL: return Operator.EQUAL;
@@ -119,7 +120,8 @@ public class BinaryExpr extends Expr implements Foldable {
 	}
 
 	public LNumber foldedValue() {
-		LNumber ln = operandToLuaNumber(this.left), rn = operandToLuaNumber(this.right);
+		LNumber ln = operandToLuaNumber(this.left),
+				rn = operandToLuaNumber(this.right);
 		if (ln == null || rn == null) {
 			return null;
 		}
@@ -174,7 +176,7 @@ public class BinaryExpr extends Expr implements Foldable {
 
 	private static LNumber operandToLuaNumber(Expr operand) {
 		if (operand instanceof LiteralNumber) {
-			return new LNumber(Double.parseDouble(((LiteralNumber) operand).getText()));
+			return new LNumber(((LiteralNumber)operand).getText());
 		} else if (operand instanceof Foldable) {
 			LValue v = ((Foldable) operand).foldedValue();
 			return (v instanceof LNumber) ? (LNumber)v : null;
