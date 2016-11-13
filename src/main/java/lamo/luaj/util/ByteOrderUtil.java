@@ -1,35 +1,30 @@
 package lamo.luaj.util;
 
-import java.nio.ByteOrder;
-
 public class ByteOrderUtil {
-
-	private static final boolean LITTLE_ENDIAN =
-		(ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN);
 
 	public static byte[] toBytes(short s, boolean le) {
 		byte[] bytes = toBytes(s);
-		return le == LITTLE_ENDIAN ? bytes : reverse(bytes);
+		return le ? bytes : reverse(bytes);
 	}
 
 	public static byte[] toBytes(int i, boolean le) {
 		byte[] bytes = toBytes(i);
-		return le == LITTLE_ENDIAN ? bytes : reverse(bytes);
+		return le ? bytes : reverse(bytes);
 	}
 
 	public static byte[] toBytes(long l, boolean le) {
 		byte[] bytes = toBytes(l);
-		return le == LITTLE_ENDIAN ? bytes : reverse(bytes);
+		return le ? bytes : reverse(bytes);
 	}
 
 	public static byte[] toBytes(float f, boolean le) {
 		byte[] bytes = toBytes(f);
-		return le == LITTLE_ENDIAN ? bytes : reverse(bytes);
+		return le ? bytes : reverse(bytes);
 	}
 
 	public static byte[] toBytes(double d, boolean le) {
 		byte[] bytes = toBytes(d);
-		return le == LITTLE_ENDIAN ? bytes : reverse(bytes);
+		return le ? bytes : reverse(bytes);
 	}
 
 	public static byte[] reverse(byte[] bytes) {
